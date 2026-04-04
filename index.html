@@ -462,14 +462,16 @@ button:active{transform:scale(0.94);opacity:0.85}
       </div>
       <!-- Log display -->
       <div id="action-log" style="margin-bottom:10px;min-height:32px"></div>
-      <!-- Street selector -->
-      <div style="display:flex;gap:5px;margin-bottom:10px">
+      <!-- Step 1: Street -->
+      <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">① ストリートを選択</div>
+      <div style="display:flex;gap:5px;margin-bottom:12px">
         <button onclick="addStreetDivider('preflop')"  class="street-btn" id="sb-pre"  style="flex:1">PF</button>
         <button onclick="addStreetDivider('flop')"     class="street-btn" id="sb-flop" style="flex:1">Flop</button>
         <button onclick="addStreetDivider('turn')"     class="street-btn" id="sb-turn" style="flex:1">Turn</button>
         <button onclick="addStreetDivider('river')"    class="street-btn" id="sb-rvr"  style="flex:1">River</button>
       </div>
-      <!-- Action input row -->
+      <!-- Step 2: Player + Action -->
+      <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">② プレイヤーとアクションを選択</div>
       <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
         <select id="ab-player" style="flex:1;padding:7px 4px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:11px;outline:none"></select>
         <select id="ab-action" onchange="onAbActionChange()" style="flex:1;padding:7px 4px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:11px;outline:none">
@@ -499,7 +501,8 @@ button:active{transform:scale(0.94);opacity:0.85}
           <span style="font-size:11px;color:var(--text-dim)">BB</span>
         </div>
       </div>
-      <button onclick="addAction()" style="width:100%;padding:9px;border-radius:7px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--surface3);color:var(--green-accent);border:1px solid #1a5c1a">＋ アクションを追加</button>
+      <!-- Step 3: Add -->
+      <button onclick="addAction()" style="width:100%;padding:11px;border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#16a34a;color:#fff;border:none">③ 追加する</button>
     </div>
     <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">評価してほしいポイント</div>
