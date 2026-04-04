@@ -102,7 +102,7 @@ html{height:100%;background:#071507}
 body{font-family:'Inter','Courier New',monospace;color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--green-dark)}
 button{transition:transform .1s ease,opacity .1s ease}
 button:active{transform:scale(0.94);opacity:0.85}
-.header{background:linear-gradient(180deg,#0d2a0d,#0a1a0a);border-bottom:1.5px solid var(--gold-dim);padding:12px 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header{background:linear-gradient(180deg,#0d2a0d,#0a1a0a);border-bottom:1.5px solid var(--gold-dim);padding:12px 16px 10px;padding-top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .header-title{font-size:14px;font-weight:700;color:var(--gold);letter-spacing:2px}
 .header-sub{font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-top:1px}
 .size-btns{display:flex;gap:5px}
@@ -2419,7 +2419,20 @@ function renderAbPlayerSelect(){
 }
 
 function addStreetDivider(street){
-  actionLog=actionLog.filter(e=>!(e.type==='street'&&e.street===street));
+  const order=['preflop','flop','turn','river'];
+  const existing=actionLog.filter(e=>e.type==='street').map(e=>e.street);
+
+  // 既に同じストリートがあれば何もしない
+  if(existing.includes(street)) return;
+
+  // 順番チェック：前のストリートが入っていないと追加不可
+  const idx=order.indexOf(street);
+  const prev=order[idx-1];
+  if(idx>0&&!existing.includes(prev)){
+    // 前のストリートを自動追加
+    actionLog.push({type:'street',street:prev,label:STREET_LABELS[prev]});
+  }
+
   currentStreet=street;
   actionLog.push({type:'street',street,label:STREET_LABELS[street]});
   updateStreetBtns();
@@ -2428,9 +2441,16 @@ function addStreetDivider(street){
 }
 
 function updateStreetBtns(){
+  const existing=new Set(actionLog.filter(e=>e.type==='street').map(e=>e.street));
+  const map={preflop:'pre',flop:'flop',turn:'turn',river:'rvr'};
   ['preflop','flop','turn','river'].forEach(s=>{
-    const btn=document.getElementById('sb-'+{preflop:'pre',flop:'flop',turn:'turn',river:'rvr'}[s]);
-    if(btn) btn.className='street-btn'+(s===currentStreet?' active':'');
+    const btn=document.getElementById('sb-'+map[s]);
+    if(!btn) return;
+    const done=existing.has(s);
+    const active=s===currentStreet;
+    btn.className='street-btn'+(active?' active':'');
+    btn.style.opacity=done?'0.35':'1';
+    btn.style.cursor=done?'not-allowed':'pointer';
   });
 }
 
