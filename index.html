@@ -423,10 +423,9 @@ button:active{transform:scale(0.94);opacity:0.85}
   <div class="panel" id="panel-log" style="background:var(--green-dark);padding:12px 14px 20px;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px">PLAY LOG</div>
-      <div style="font-size:9px;color:var(--text-dim)">Hero: <span id="log-hero-pos" style="color:var(--gold);font-weight:700"></span></div>
     </div>
-    <!-- Hero position selector (shared with Range tab) -->
-    <div id="log-pos-btns" style="display:flex;flex-wrap:nowrap;gap:5px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px"></div>
+    <!-- Hero pos btns hidden - now inside action builder -->
+    <div id="log-pos-btns" style="display:none"></div>
 
     <!-- Hero Hand Picker -->
     <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
@@ -460,18 +459,16 @@ button:active{transform:scale(0.94);opacity:0.85}
         <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">アクション経緯</div>
         <button onclick="clearActions()" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">クリア</button>
       </div>
-      <!-- Log display -->
-      <div id="action-log" style="margin-bottom:10px;min-height:32px"></div>
-      <!-- Step 1: Street -->
-      <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">① ストリートを選択</div>
-      <div style="display:flex;gap:5px;margin-bottom:12px">
-        <button onclick="addStreetDivider('preflop')"  class="street-btn" id="sb-pre"  style="flex:1">PF</button>
-        <button onclick="addStreetDivider('flop')"     class="street-btn" id="sb-flop" style="flex:1">Flop</button>
-        <button onclick="addStreetDivider('turn')"     class="street-btn" id="sb-turn" style="flex:1">Turn</button>
-        <button onclick="addStreetDivider('river')"    class="street-btn" id="sb-rvr"  style="flex:1">River</button>
+      <!-- Hero position selector inside action builder -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px;background:var(--surface3);border-radius:8px;border:1px solid var(--border)">
+        <div style="font-size:10px;color:var(--gold);font-weight:700;flex-shrink:0">Hero</div>
+        <div id="ab-hero-pos-btns" style="display:flex;gap:4px;overflow-x:auto;flex:1;-webkit-overflow-scrolling:touch"></div>
       </div>
-      <!-- Step 2: Player + Action -->
-      <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">② プレイヤーとアクションを選択</div>
+      <!-- Log display -->
+      <div id="action-log" style="margin-bottom:10px;min-height:24px"></div>
+      <!-- Next street button - shows only next available street -->
+      <div id="next-street-row" style="margin-bottom:10px"></div>
+      <!-- Player + Action -->
       <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
         <select id="ab-player" style="flex:1;padding:7px 4px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:11px;outline:none"></select>
         <select id="ab-action" onchange="onAbActionChange()" style="flex:1;padding:7px 4px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:11px;outline:none">
@@ -484,13 +481,13 @@ button:active{transform:scale(0.94);opacity:0.85}
           <option value="allin">All-in</option>
         </select>
       </div>
-      <!-- Size input (shown for bet/raise/3bet) -->
+      <!-- Size input -->
       <div id="ab-size-row" style="display:none;margin-bottom:8px">
         <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">サイズ</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
-          <button onclick="setAbSize('0.33')" class="size-quick-btn">1/3ポット</button>
-          <button onclick="setAbSize('0.5')"  class="size-quick-btn">1/2ポット</button>
-          <button onclick="setAbSize('0.75')" class="size-quick-btn">3/4ポット</button>
+          <button onclick="setAbSize('0.33')" class="size-quick-btn">1/3P</button>
+          <button onclick="setAbSize('0.5')"  class="size-quick-btn">1/2P</button>
+          <button onclick="setAbSize('0.75')" class="size-quick-btn">3/4P</button>
           <button onclick="setAbSize('1')"    class="size-quick-btn">ポット</button>
           <button onclick="setAbSize('2')"    class="size-quick-btn">2x</button>
           <button onclick="setAbSize('2.5')"  class="size-quick-btn">2.5x</button>
@@ -501,8 +498,7 @@ button:active{transform:scale(0.94);opacity:0.85}
           <span style="font-size:11px;color:var(--text-dim)">BB</span>
         </div>
       </div>
-      <!-- Step 3: Add -->
-      <button onclick="addAction()" style="width:100%;padding:11px;border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#16a34a;color:#fff;border:none">③ 追加する</button>
+      <button onclick="addAction()" style="width:100%;padding:11px;border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#16a34a;color:#fff;border:none">追加する</button>
     </div>
     <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">評価してほしいポイント</div>
@@ -1104,53 +1100,88 @@ function renderTable(){
   const NS='http://www.w3.org/2000/svg';
   coords.forEach(({x,y},i)=>{
     const isHero=i===state.heroIdx,isL=i===l,isR=i===r,hasPro=hasProfile(i)&&!isHero;
-    if(isHero){const el=document.createElementNS(NS,'circle');el.setAttribute('cx',x);el.setAttribute('cy',y);el.setAttribute('r','11');el.setAttribute('fill','none');el.setAttribute('stroke','#c9a227');el.setAttribute('stroke-width','1');el.setAttribute('opacity','.5');g.appendChild(el)}
-    const c=document.createElementNS(NS,'circle');c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r','9.5');c.setAttribute('fill',isHero?'#c9a227':hasPro?'#0d1f35':'#0d1a0d');c.setAttribute('stroke',isHero?'#f0d060':isL?'#60A5FA':isR?'#F97316':'#2d4d2d');c.setAttribute('stroke-width',isHero||isL||isR?'1.2':'0.6');if(!isHero){c.style.cursor='pointer';c.addEventListener('click',()=>openSheet(i))}g.appendChild(c);
-    const t=document.createElementNS(NS,'text');t.setAttribute('x',x);t.setAttribute('y',y+1.5);t.setAttribute('text-anchor','middle');t.setAttribute('font-size','4.5');t.setAttribute('fill',isHero?'#0a1a0a':'#90b890');t.setAttribute('font-weight',isHero?'bold':'normal');t.setAttribute('font-family','monospace');t.textContent=isHero?'★':p[i];if(!isHero){t.style.cursor='pointer';t.addEventListener('click',()=>openSheet(i))}g.appendChild(t);
-    // Player name label
+
+    // Hero: 二重リング（★なし）
+    if(isHero){
+      const ring=document.createElementNS(NS,'circle');
+      ring.setAttribute('cx',x);ring.setAttribute('cy',y);ring.setAttribute('r','12.5');
+      ring.setAttribute('fill','none');ring.setAttribute('stroke','#c9a227');
+      ring.setAttribute('stroke-width','1.5');g.appendChild(ring);
+    }
+    const c=document.createElementNS(NS,'circle');
+    c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r','9.5');
+    c.setAttribute('fill',isHero?'#c9a227':hasPro?'#0d1f35':'#0d1a0d');
+    c.setAttribute('stroke',isHero?'#f0d060':isL?'#60A5FA':isR?'#F97316':'#2d4d2d');
+    c.setAttribute('stroke-width',isHero||isL||isR?'1.5':'0.6');
+    if(!isHero){c.style.cursor='pointer';}
+    g.appendChild(c);
+
+    // ポジションテキスト
     const pname=state.seatProfiles[i]?.name||'';
+    const t=document.createElementNS(NS,'text');
+    t.setAttribute('x',x);t.setAttribute('y',pname&&!isHero?y-1.5:y+1.5);
+    t.setAttribute('text-anchor','middle');
+    t.setAttribute('font-size',isHero?'4':'4.5');
+    t.setAttribute('fill',isHero?'#0a1a0a':'#90b890');
+    t.setAttribute('font-weight','bold');t.setAttribute('font-family','monospace');
+    t.textContent=p[i];
+    if(!isHero){t.style.cursor='pointer';}
+    g.appendChild(t);
+
+    // Hero表示: "YOU"テキスト
+    if(isHero){
+      const youT=document.createElementNS(NS,'text');
+      youT.setAttribute('x',x);youT.setAttribute('y',y+3.5);
+      youT.setAttribute('text-anchor','middle');youT.setAttribute('font-size','3');
+      youT.setAttribute('fill','#0a1a0a');youT.setAttribute('font-weight','700');
+      youT.textContent='YOU';g.appendChild(youT);
+    }
+
+    // プレイヤー名
     if(pname&&!isHero){
-      // Position label above seat (pos text shifts slightly)
-      const posT=document.createElementNS(NS,'text');
-      posT.setAttribute('x',x);posT.setAttribute('y',y+1.5);
-      posT.setAttribute('text-anchor','middle');posT.setAttribute('font-size','3.2');
-      posT.setAttribute('fill','#90b890');posT.setAttribute('font-family','monospace');
-      posT.textContent=p[i];posT.style.cursor='pointer';
-      posT.addEventListener('click',()=>openSheet(i));
-      // Overwrite the previous text with position above, name below
-      t.setAttribute('y',y-2);t.setAttribute('font-size','3.2');
-      // Name text below
       const nt=document.createElementNS(NS,'text');
       nt.setAttribute('x',x);nt.setAttribute('y',y+4.5);
-      nt.setAttribute('text-anchor','middle');nt.setAttribute('font-size','3.8');
+      nt.setAttribute('text-anchor','middle');nt.setAttribute('font-size','3.5');
       nt.setAttribute('fill','#c9a227');nt.setAttribute('font-weight','700');
       nt.setAttribute('font-family','Inter,monospace');
-      // Truncate long names
       nt.textContent=pname.length>6?pname.slice(0,5)+'…':pname;
       nt.style.cursor='pointer';
       nt.addEventListener('click',()=>openSheet(i));
       g.appendChild(nt);
     }
-    if(hasPro){const d=document.createElementNS(NS,'circle');d.setAttribute('cx',x+7);d.setAttribute('cy',y-7);d.setAttribute('r','3');d.setAttribute('fill',profileColor(i));d.style.cursor='pointer';d.addEventListener('click',()=>openSheet(i));g.appendChild(d)}
+
+    // プロフィールドット
+    if(hasPro){
+      const d=document.createElementNS(NS,'circle');
+      d.setAttribute('cx',x+7);d.setAttribute('cy',y-7);d.setAttribute('r','3');
+      d.setAttribute('fill',profileColor(i));d.style.cursor='pointer';
+      d.addEventListener('click',()=>openSheet(i));g.appendChild(d);
+    }
+
+    // タッチ処理: ダブルタップ→Hero, シングル→openSheet
     if(!isHero){
-      let last=0;
-      let didDoubleTap=false;
+      let last=0,timer=null;
       const h=document.createElementNS(NS,'circle');
-      h.setAttribute('cx',x);h.setAttribute('cy',y);h.setAttribute('r','11');
+      h.setAttribute('cx',x);h.setAttribute('cy',y);h.setAttribute('r','13');
       h.setAttribute('fill','transparent');h.style.cursor='pointer';
       h.addEventListener('touchend',e=>{
         const now=Date.now();
-        if(now-last<350){
+        if(now-last<400){
+          // ダブルタップ
           e.preventDefault();
-          didDoubleTap=true;
+          if(timer){clearTimeout(timer);timer=null;}
+          haptic('medium');
           setHero(i);
         } else {
-          didDoubleTap=false;
+          // シングルタップ: 少し待ってからopenSheet（ダブルタップ待ち）
+          if(timer) clearTimeout(timer);
+          timer=setTimeout(()=>{openSheet(i);timer=null;},420);
         }
         last=now;
       });
-      h.addEventListener('click',()=>{
-        if(didDoubleTap){didDoubleTap=false;return;}
+      h.addEventListener('click',e=>{
+        // モバイルではtouchendが処理するのでclickは無視
+        if('ontouchstart' in window) return;
         openSheet(i);
       });
       g.appendChild(h);
@@ -1308,8 +1339,12 @@ function savePlayer(){
   const idx=players.findIndex(p=>p.name===name);
   if(idx>=0)players[idx]={name,profile};
   else players.push({name,profile});
-  savePlayers(players);input.value='';
-  renderSheetPlayers(seatIdx);
+  savePlayers(players);
+  // 保存と同時にそのシートに適用
+  state.seatProfiles[seatIdx]={...profile,name};
+  input.value='';
+  renderAll();
+  closeSheet(); // シートを閉じて即時反映
 }
 
 function applyPlayer(seatIdx,playerName){
@@ -1317,20 +1352,15 @@ function applyPlayer(seatIdx,playerName){
   const p=players.find(p=>p.name===playerName);
   if(!p)return;
   state.seatProfiles[seatIdx]={...(p.profile||{vpip:1,agg:1,skill:1,tends:[]}),name:playerName};
-  renderAll();openSheet(seatIdx);
-}
-
-function deletePlayer(playerName){
-  const players=loadPlayers().filter(p=>p.name!==playerName);
-  savePlayers(players);
-  if(state.activeSheet!==null) renderSheetPlayers(state.activeSheet);
-  if(state.currentTab==='book') renderBookList();
+  renderAll();
+  renderSheetPlayers(seatIdx); // 選択状態を更新（シートは開いたまま）
 }
 
 function renderSheetPlayers(seatIdx){
   const players=loadPlayers();
   const el=document.getElementById('sheet-players');
   if(players.length===0){el.innerHTML='';return;}
+  const appliedName=state.seatProfiles[seatIdx]?.name||'';
   el.innerHTML=`<div class="sheet-section">プレイヤー帳</div>`+
     players.map(p=>{
       const pro=p.profile||{vpip:2,agg:2,skill:2,tends:[]};
@@ -1340,10 +1370,14 @@ function renderSheetPlayers(seatIdx){
         pro.skill!==1?SKILL_META[pro.skill].emoji+SKILL_META[pro.skill].label:null,
         ...pro.tends.map(t=>TEND_META[t].emoji+TEND_META[t].label)
       ].filter(Boolean).join(' ');
-      return`<div class="player-row">
-        <div class="player-name">${p.name}</div>
+      const isApplied=p.name===appliedName;
+      return`<div class="player-row" style="background:${isApplied?'#0d2a10':''};border-radius:${isApplied?'6px':'0'}">
+        <div class="player-name" style="color:${isApplied?'#4ade80':'var(--text)'}">${p.name}${isApplied?' ✓':''}</div>
         <div style="font-size:10px;color:var(--text-dim);flex:2">${summary}</div>
-        <button class="player-apply-btn" onclick="applyPlayer(${seatIdx},'${p.name}')">適用</button>
+        <button class="player-apply-btn" onclick="applyPlayer(${seatIdx},'${p.name}')"
+          style="background:${isApplied?'#16a34a':'var(--surface3)'};color:${isApplied?'#fff':'var(--green-accent)'};border:1px solid ${isApplied?'#16a34a':'#1a5c1a'}">
+          ${isApplied?'適用中':'適用'}
+        </button>
         <button class="player-del-btn" onclick="deletePlayer('${p.name}')">✕</button>
       </div>`;
     }).join('');
@@ -1608,61 +1642,55 @@ function setVillainOpenPos(pos){
 function applyBBDefAdj(c, t, key){
   const stack=state.stackSize;
   const n=state.tableSize;
-  const isPremium=(t>=0.85); // プレミアムは補正しない
+  // プレミアム判定（コール0、3-bet高頻度）
+  const isPremium=(t>=0.85);
 
   // ── スタックサイズ補正 ────────────────────────────────────
-  // ショートになるほどコール減・3-betオールイン増（またはフォールド増）
-  // ディープになるほどコール増（インプライドオッズ）
-  let stackCallMult=1, stackThreeMult=1;
+  // 20-30BB: プッシュフォールド域 → コールをなくし3-bet(プッシュ)に振る
+  // ディープ: コール増（インプライドオッズ）
+  let newC=c, newT=t;
+
   if(stack<=20){
-    stackCallMult=0.2;  // ほぼコールなし、プッシュフォールド
-    stackThreeMult=1.8; // 3-betはオールイン
+    // 全てプッシュかフォールド。コールをなくす
+    // コール分を3-betに振り替える（コールEV < プッシュEV）
+    newT=Math.min(1, t + c*0.8); // コールの80%を3-betに
+    newC=c*0.1; // コールほぼゼロ
   } else if(stack<=30){
-    stackCallMult=0.45;
-    stackThreeMult=1.5;
+    newT=Math.min(1, t + c*0.5);
+    newC=c*0.3;
   } else if(stack<=50){
-    stackCallMult=0.72;
-    stackThreeMult=1.2;
+    newT=Math.min(1, t + c*0.15);
+    newC=c*0.72;
   } else if(stack<=75){
-    stackCallMult=0.88;
-    stackThreeMult=1.08;
+    newC=c*0.88; newT=t*1.08;
   } else if(stack===200){
-    // 投機的ハンドのコールEV向上
     const isSpec=isSpeculativeHand(key);
-    stackCallMult=isSpec?1.25:1.08;
-    stackThreeMult=1.0;
+    newC=c*(isSpec?1.25:1.08);
   }
 
-  // ── テーブル人数補正 ──────────────────────────────────────
-  // 人数が多いほどUTGのレンジが狭い → BBはタイトに守備
-  // vs UTG の場合のみ人数が影響（BTN/SBはポジション固定）
-  let sizeCallMult=1, sizeThreeMult=1;
+  // ── テーブル人数補正（UTG/MP限定）─────────────────────────
   if(villainOpenPos==='UTG'||villainOpenPos==='UTG+1'){
-    if(n>=8){ sizeCallMult=0.85; sizeThreeMult=1.15; }
-    else if(n===7){ sizeCallMult=0.92; sizeThreeMult=1.08; }
-    // 6max UTGはほぼMP相当なので補正小
+    if(n>=8){ newC*=0.85; newT=Math.min(1,newT*1.15); }
+    else if(n===7){ newC*=0.92; newT=Math.min(1,newT*1.08); }
   } else if(villainOpenPos==='MP'||villainOpenPos==='MP+1'){
-    if(n>=9){ sizeCallMult=0.90; sizeThreeMult=1.10; }
+    if(n>=9){ newC*=0.90; newT=Math.min(1,newT*1.10); }
   }
 
   // ── レーキ補正 ────────────────────────────────────────────
-  // レーキ10%: コールEV低下（ポストフロップでの損失増）→コール縮小・フォールド増
-  // 3-betでプリフロップ終了ならレーキ回避できる
-  let rakeCallMult=1, rakeThreeMult=1;
   if(state.rake===10&&!isPremium){
-    rakeCallMult=0.82;   // コール約18%縮小
-    rakeThreeMult=1.12;  // 3-bet約12%拡大
+    newC*=0.82;
+    newT=Math.min(1,newT*1.12);
   }
 
-  if(isPremium) return{c:Math.min(1,c),t:Math.min(1,t)};
-
-  let newC=Math.min(1,c*stackCallMult*sizeCallMult*rakeCallMult);
-  let newT=Math.min(1,t*stackThreeMult*sizeThreeMult*rakeThreeMult);
-  // コール+3-betの合計が1を超えないよう正規化
-  if(newC+newT>1){ const total=newC+newT; newC=newC/total*(1-(1-newC-newT>0?1-newC-newT:0)); newT=newT/total*(1-(1-newC-newT>0?0:0)); }
+  // 正規化: c+t ≤ 1
   newC=Math.max(0,Math.min(1,newC));
   newT=Math.max(0,Math.min(1,newT));
-  if(newC+newT>1){newC=1-newT;}
+  if(newC+newT>1){
+    // 3-betを優先、残りをコール
+    newT=Math.min(1,newT);
+    newC=Math.max(0,1-newT)*( newC/(newC+(1-newT)) );
+    newC=Math.min(newC,1-newT);
+  }
   return{c:newC,t:newT};
 }
 
@@ -1915,6 +1943,7 @@ function setHeroFromLog(i){
   state.heroIdx=i;
   renderAll();
   renderVillainStacks();
+  renderAbHeroPosBtns();
 }
 
 function setRake(r){
@@ -2344,8 +2373,11 @@ const ACTION_COLORS={fold:'#f87171',check:'#94A3B8',call:'#FBBF24',bet:'#4ade80'
 function initActionBuilder(){
   actionLog=[];
   currentStreet='preflop';
+  // Preflopを自動追加
+  actionLog.push({type:'street',street:'preflop',label:STREET_LABELS['preflop']});
   updateStreetBtns();
   renderAbPlayerSelect();
+  renderAbHeroPosBtns();
   renderActionLog();
 }
 
@@ -2409,30 +2441,22 @@ function renderAbPlayerSelect(){
     const isHero=i===state.heroIdx;
     const pro=state.seatProfiles[i];
     const pname=pro?.name||'';
-    const label=isHero
-      ?`★ Hero(${seat})`
-      :pname?`${seat}(${pname})`:seat;
+    const label=isHero?`★ Hero(${seat})`:pname?`${seat}(${pname})`:seat;
     return`<option value="${seat}">${label}</option>`;
   }).join('');
   if(active.includes(heroPos())) sel.value=heroPos();
   else if(active.length>0) sel.value=active[0];
+  // アクション選択肢も更新
+  renderActionSelect(sel.value);
+  // プレイヤー変更時にもアクション更新
+  sel.onchange=()=>renderActionSelect(sel.value);
 }
 
 function addStreetDivider(street){
-  const order=['preflop','flop','turn','river'];
   const existing=actionLog.filter(e=>e.type==='street').map(e=>e.street);
-
-  // 既に同じストリートがあれば何もしない
+  // 既にある場合は無視
   if(existing.includes(street)) return;
-
-  // 順番チェック：前のストリートが入っていないと追加不可
-  const idx=order.indexOf(street);
-  const prev=order[idx-1];
-  if(idx>0&&!existing.includes(prev)){
-    // 前のストリートを自動追加
-    actionLog.push({type:'street',street:prev,label:STREET_LABELS[prev]});
-  }
-
+  // 追加（自動補完なし・順番は次のストリートのみ許可する）
   currentStreet=street;
   actionLog.push({type:'street',street,label:STREET_LABELS[street]});
   updateStreetBtns();
@@ -2441,23 +2465,106 @@ function addStreetDivider(street){
 }
 
 function updateStreetBtns(){
-  const existing=new Set(actionLog.filter(e=>e.type==='street').map(e=>e.street));
-  const map={preflop:'pre',flop:'flop',turn:'turn',river:'rvr'};
-  ['preflop','flop','turn','river'].forEach(s=>{
-    const btn=document.getElementById('sb-'+map[s]);
-    if(!btn) return;
-    const done=existing.has(s);
-    const active=s===currentStreet;
-    btn.className='street-btn'+(active?' active':'');
-    btn.style.opacity=done?'0.35':'1';
-    btn.style.cursor=done?'not-allowed':'pointer';
-  });
+  const order=['preflop','flop','turn','river'];
+  const labels={preflop:'Preflop',flop:'Flop',turn:'Turn',river:'River'};
+  const existing=actionLog.filter(e=>e.type==='street').map(e=>e.street);
+  const row=document.getElementById('next-street-row');
+  if(!row) return;
+
+  // 次に追加できるストリートを計算（順番通り、未追加のもの）
+  const nextStreets=order.filter(s=>!existing.includes(s));
+
+  if(nextStreets.length===0){
+    row.innerHTML='';
+    return;
+  }
+
+  // 最初の1つだけ表示 or 全部表示（最初の未追加から順に）
+  const btns=nextStreets.map(s=>{
+    const isNext=s===nextStreets[0];
+    return`<button onclick="addStreetDivider('${s}')"
+      style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;
+      background:${isNext?'var(--surface3)':'transparent'};
+      color:${isNext?'var(--text)':'var(--text-muted)'};
+      border:1px solid ${isNext?'var(--border2)':'var(--border)'};
+      opacity:${isNext?'1':'0.4'}">
+      + ${labels[s]}
+    </button>`;
+  }).join('');
+  row.innerHTML=`<div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">次のストリートへ</div><div style="display:flex;gap:6px">${btns}</div>`;
+}
+
+function renderAbHeroPosBtns(){
+  const el=document.getElementById('ab-hero-pos-btns');
+  if(!el) return;
+  const p=pos();
+  el.innerHTML=p.map((seat,i)=>{
+    const isHero=i===state.heroIdx;
+    return`<button onclick="setHeroFromLog(${i})"
+      style="padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0;
+      background:${isHero?'var(--gold)':'transparent'};color:${isHero?'#0a1a0a':'var(--text-dim)'};
+      border:1px solid ${isHero?'var(--gold)':'var(--border2)'}">${seat}</button>`;
+  }).join('');
+}
+
+function getStreetActions(){
+  // 現ストリートのアクション一覧を返す
+  let inCurrent=false;
+  const acts=[];
+  for(const e of actionLog){
+    if(e.type==='street') inCurrent=(e.street===currentStreet);
+    if(inCurrent&&e.type==='action') acts.push(e);
+  }
+  return acts;
+}
+
+function getAvailableActions(player){
+  const acts=getStreetActions();
+  // 最後の積極的アクション（bet/raise/3bet）を探す
+  const lastAggressive=acts.slice().reverse().find(e=>['bet','raise','3bet','allin'].includes(e.action));
+  const hasAggressive=!!lastAggressive;
+  const aggrCount=acts.filter(e=>['raise','3bet','bet'].includes(e.action)).length;
+
+  if(currentStreet==='preflop'){
+    if(!hasAggressive){
+      // まだレイズなし: リンプ or レイズが選択肢
+      // BBはCheck可能（SB以外のコールがない場合）
+      const isBB=player==='BB';
+      const hasLimper=acts.some(e=>e.action==='call');
+      if(isBB&&!hasLimper) return['check','raise','allin'];
+      return['fold','call','raise','allin'];
+    }
+    // レイズあり
+    if(aggrCount===1) return['fold','call','3bet','allin'];   // 1回レイズ後→3bet
+    if(aggrCount===2) return['fold','call','raise','allin'];  // 3bet後→4bet(raise)
+    return['fold','call','allin'];
+  } else {
+    // ポストフロップ
+    if(!hasAggressive) return['check','bet','allin'];
+    if(aggrCount===1) return['fold','call','raise','allin'];   // ベット後→レイズ
+    if(aggrCount===2) return['fold','call','3bet','allin'];    // レイズ後→3bet
+    return['fold','call','allin'];
+  }
+}
+
+function renderActionSelect(player){
+  const sel=document.getElementById('ab-action');
+  if(!sel) return;
+  const available=getAvailableActions(player||sel.dataset.player||'');
+  const labels={fold:'Fold',check:'Check',call:'Call',bet:'Bet',raise:'Raise','3bet':'3-Bet',allin:'All-in'};
+  const prev=sel.value;
+  sel.innerHTML=available.map(a=>`<option value="${a}">${labels[a]}</option>`).join('');
+  // 前の選択が有効なら保持
+  if(available.includes(prev)) sel.value=prev;
+  onAbActionChange();
 }
 
 function onAbActionChange(){
   const act=document.getElementById('ab-action')?.value;
   const row=document.getElementById('ab-size-row');
-  if(row) row.style.display=(act==='bet'||act==='raise'||act==='3bet')?'block':'none';
+  if(row) row.style.display=(act==='bet'||act==='raise'||act==='3bet'||act==='allin')?'block':'none';
+  // All-inはサイズ不要
+  if(act==='allin'&&row) row.style.display='none';
 }
 
 function setAbSize(multiplier){
@@ -2487,6 +2594,7 @@ function addAction(){
   actionLog.push({type:'action',player,action,size:needsSize?size:'',auto:false});
   if(sizeEl) sizeEl.value='';
   renderAbPlayerSelect();
+  renderActionSelect(document.getElementById('ab-player')?.value||'');
   renderActionLog();
 }
 
@@ -2687,11 +2795,10 @@ function getBoardString(){
   return s;
 }
 function renderVillainStacks(){
-  // Init action builder only
   renderAbPlayerSelect();
+  renderAbHeroPosBtns();
   if(actionLog.length===0) initActionBuilder();
-  else renderActionLog();
-  updateStreetBtns();
+  else{ renderActionLog(); updateStreetBtns(); }
 }
 
 function buildTableContext(){
