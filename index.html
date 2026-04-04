@@ -1,0 +1,3209 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ringdom">
+<meta name="description" content="リングゲームをdominate。リアルタイムエクスプロイト戦略ツール。">
+<meta name="theme-color" content="#071507">
+
+<!-- PWA Manifest (inline) -->
+<script>
+(function(){
+  const manifest={
+    name:'Ringdom',
+    short_name:'Ringdom',
+    description:'リングゲームをdominate。リアルタイムエクスプロイト戦略ツール。',
+    start_url:'.',
+    display:'standalone',
+    background_color:'#071507',
+    theme_color:'#071507',
+    orientation:'portrait',
+    icons:[
+      {src:makeIcon(192),sizes:'192x192',type:'image/png'},
+      {src:makeIcon(512),sizes:'512x512',type:'image/png'},
+    ]
+  };
+  function makeIcon(size){
+    // SVGをPNG Data URLに変換
+    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
+      <rect width="100" height="100" rx="22" fill="#071507"/>
+      <rect x="4" y="4" width="92" height="92" rx="18" fill="none" stroke="#c9a227" stroke-width="2"/>
+      <text x="50" y="42" text-anchor="middle" font-family="Georgia,serif" font-size="32" fill="#c9a227">♠</text>
+      <text x="50" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="800" fill="#c9a227" letter-spacing="1">RING</text>
+      <text x="50" y="86" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="800" fill="#c9a227" letter-spacing="1">DOM</text>
+    </svg>`;
+    const canvas=document.createElement('canvas');
+    canvas.width=canvas.height=size;
+    const ctx=canvas.getContext('2d');
+    const img=new Image();
+    const blob=new Blob([svg],{type:'image/svg+xml'});
+    const url=URL.createObjectURL(blob);
+    // Return placeholder — actual conversion happens async below
+    return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  }
+  const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('link');
+  link.rel='manifest';link.href=url;
+  document.head.appendChild(link);
+})();
+</script>
+
+<!-- Apple Touch Icon (SVG inline → link) -->
+<script>
+(function(){
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 100 100">
+    <rect width="100" height="100" rx="22" fill="#071507"/>
+    <rect x="4" y="4" width="92" height="92" rx="18" fill="none" stroke="#c9a227" stroke-width="2"/>
+    <text x="50" y="42" text-anchor="middle" font-family="Georgia,serif" font-size="32" fill="#c9a227">♠</text>
+    <text x="50" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="800" fill="#c9a227" letter-spacing="1">RING</text>
+    <text x="50" y="86" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="800" fill="#c9a227" letter-spacing="1">DOM</text>
+  </svg>`;
+  const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  const link=document.createElement('link');
+  link.rel='apple-touch-icon';link.href=url;
+  document.head.appendChild(link);
+})();
+</script>
+
+<!-- Service Worker registration -->
+<script>
+if('serviceWorker' in navigator){
+  const swCode=`
+const CACHE='ringdom-v1';
+const ASSETS=['/'];
+self.addEventListener('install',e=>{
+  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
+  self.skipWaiting();
+});
+self.addEventListener('activate',e=>{
+  e.waitUntil(caches.keys().then(keys=>
+    Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))
+  ));
+  self.clients.claim();
+});
+self.addEventListener('fetch',e=>{
+  e.respondWith(
+    caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('/')))
+  );
+});
+`;
+  const blob=new Blob([swCode],{type:'application/javascript'});
+  const url=URL.createObjectURL(blob);
+  navigator.serviceWorker.register(url).catch(()=>{});
+}
+</script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--gold:#c9a227;--gold-dim:#7a6010;--green-dark:#071507;--green-accent:#4ade80;--text:#d4e8d4;--text-dim:#5a7a5a;--text-muted:#334433;--raise:#16a34a;--mixed:#ca8a04;--bluff:#b45309;--red:#f87171;--blue:#60A5FA;--orange:#F97316;--surface:#0d1f0d;--surface2:#111f11;--surface3:#162616;--border:#1e3a1e;--border2:#2a4a2a;--safe-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{height:100%;background:#071507}
+body{font-family:'Inter','Courier New',monospace;color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--green-dark)}
+button{transition:transform .1s ease,opacity .1s ease}
+button:active{transform:scale(0.94);opacity:0.85}
+.header{background:linear-gradient(180deg,#0d2a0d,#0a1a0a);border-bottom:1.5px solid var(--gold-dim);padding:12px 16px 10px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header-title{font-size:14px;font-weight:700;color:var(--gold);letter-spacing:2px}
+.header-sub{font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-top:1px}
+.size-btns{display:flex;gap:5px}
+.size-btn{padding:5px 10px;border-radius:4px;font-size:11px;font-weight:700;border:1px solid var(--border2);background:transparent;color:var(--text-dim);cursor:pointer;font-family:inherit}
+.size-btn.active{background:var(--gold);color:#0a1a0a;border-color:var(--gold)}
+.tabbar{display:flex;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)}
+.tab{flex:1;padding:10px 4px;text-align:center;font-size:10px;font-weight:700;letter-spacing:0.5px;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap;overflow:hidden}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.content{flex:1;overflow:hidden;position:relative}
+.panel{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none}
+.panel.active{display:block}
+#panel-table{background:var(--green-dark)}
+.table-wrap{padding:16px 12px 8px;display:flex;justify-content:center}
+.table-svg-container{width:100%;max-width:380px}
+.hero-bar{margin:0 12px 10px;background:var(--surface);border:1px solid var(--gold-dim);border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between}
+.hero-pos{font-size:26px;font-weight:700;color:var(--gold);line-height:1}
+.hero-label{font-size:9px;color:var(--text-dim);margin-bottom:3px;letter-spacing:1.5px}
+.hero-pct{font-size:26px;font-weight:700;line-height:1}
+.hero-pct.adjusted{color:var(--green-accent)}
+.hero-pct.normal{color:var(--text)}
+.adj-list{margin:0 12px 10px;background:#071f07;border:1px solid var(--border2);border-left:3px solid var(--green-accent);border-radius:8px;padding:8px 12px}
+.adj-title{font-size:9px;color:var(--green-accent);letter-spacing:1.5px;margin-bottom:5px}
+.adj-item{font-size:10px;color:#90d090;margin-bottom:3px;line-height:1.4}
+.adj-tag{font-weight:700}
+.seat-list{padding:0 12px 20px}
+.seat-row{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;margin-bottom:6px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer;min-height:52px}
+.seat-row.left-n{border-color:#1e3a5f;background:#0d1f30}
+.seat-row.right-n{border-color:#5c2a0a;background:#1f0f05}
+.seat-pos{font-size:13px;font-weight:700;color:var(--text-dim);min-width:50px}
+.seat-dir{font-size:9px;margin-bottom:2px}
+.seat-tags{display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end;flex:1}
+.tag-chip{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:600;border:1px solid;display:flex;align-items:center;gap:3px}
+.add-tag{font-size:10px;color:var(--text-muted)}
+#panel-range{background:var(--green-dark);padding:10px 12px 12px}
+.range-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.range-title{font-size:12px;color:var(--gold);font-weight:700;letter-spacing:2px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--text-dim)}
+.legend-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.matrix-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.matrix{display:inline-block}
+.matrix-row{display:flex}
+.matrix-col-header{display:flex;margin-left:22px;margin-bottom:2px}
+.col-h{font-size:7px;color:var(--text-dim);text-align:center;flex-shrink:0}
+.row-h{font-size:7px;color:var(--text-dim);width:22px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;padding-right:3px}
+.cell{border-radius:2px;margin:1px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;border:1px solid #2a3a2a}
+.cell-hand{font-size:6px;font-weight:700;line-height:1.1}
+.cell-pct{font-size:5.5px;line-height:1}
+.cell-delta{position:absolute;top:0;right:1px;font-size:5px;font-weight:700;line-height:1}
+.cell-suit{position:absolute;bottom:0;right:1px;font-size:5px;opacity:.5;line-height:1}
+.sheet-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;opacity:0;pointer-events:none;transition:opacity .25s}
+.sheet-overlay.open{opacity:1;pointer-events:all}
+.sheet{position:fixed;bottom:0;left:0;right:0;background:var(--surface2);border-top:1.5px solid var(--gold-dim);border-radius:18px 18px 0 0;z-index:101;padding-bottom:var(--safe-bottom);transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:72vh;overflow-y:auto}
+.sheet.open{transform:translateY(0)}
+.sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:10px auto 0}
+.sheet-header{padding:12px 20px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+.sheet-title{font-size:14px;font-weight:700;color:var(--gold)}
+.sheet-pos{font-size:11px;color:var(--text-dim)}
+.sheet-close{width:28px;height:28px;border-radius:50%;background:var(--surface3);border:none;color:var(--text-dim);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sheet-tags{padding:14px 16px;display:flex;flex-wrap:wrap;gap:8px}
+.sheet-tag{padding:9px 16px;border-radius:22px;font-size:12px;font-weight:600;border:1.5px solid;display:flex;align-items:center;gap:6px;cursor:pointer;font-family:inherit;min-height:44px}
+.sheet-hint{padding:0 20px 16px;font-size:10px;color:var(--text-dim);line-height:1.5}
+.sheet-section{padding:8px 16px 4px;font-size:9px;color:var(--text-dim);letter-spacing:1.5px}
+.player-row{display:flex;align-items:center;gap:6px;padding:8px 16px;border-bottom:1px solid var(--border)}
+.player-row:last-child{border-bottom:none}
+.player-name{flex:1;font-size:12px;font-weight:700;color:var(--text)}
+.player-tags-mini{display:flex;gap:3px;flex-wrap:wrap;flex:2}
+.player-tag-dot{width:8px;height:8px;border-radius:50%}
+.player-apply-btn{padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;background:var(--surface3);color:var(--gold);border:1px solid var(--gold-dim);cursor:pointer;font-family:inherit;white-space:nowrap}
+.player-del-btn{padding:4px 8px;border-radius:4px;font-size:10px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit}
+.save-row{padding:10px 16px 4px;display:flex;gap:8px;align-items:center}
+.save-input{flex:1;padding:7px 10px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;outline:none}
+.save-btn{padding:7px 14px;border-radius:6px;font-size:11px;font-weight:700;background:var(--surface3);color:var(--green-accent);border:1px solid #1a5c1a;cursor:pointer;font-family:inherit;white-space:nowrap}
+.card-slot{width:38px;height:52px;border-radius:6px;background:var(--surface3);border:2px dashed var(--border2);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text-muted);flex-shrink:0;font-weight:700}
+.playing-card{width:38px;height:52px;border-radius:6px;background:#f5f0e8;border:1px solid #ccc;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;cursor:default;position:relative;box-shadow:0 2px 4px rgba(0,0,0,0.4)}
+.playing-card .rank{font-size:14px;font-weight:800;line-height:1}
+.playing-card .suit-sym{font-size:12px;line-height:1}
+.card-pick-btn{width:100%;aspect-ratio:0.7;border-radius:5px;background:#1a2a1a;border:1px solid var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;font-weight:700;transition:all .1s;min-height:36px}
+.card-pick-btn:active{transform:scale(0.93)}
+.street-btn{padding:6px 4px;border-radius:5px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-dim);border:1px solid var(--border2)}
+.street-btn.active{background:var(--gold);color:#0a1a0a;border-color:var(--gold)}
+.ss-btn{flex:1;padding:5px 2px;border-radius:5px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-dim);border:1px solid var(--border2)}
+.ss-btn.active{background:var(--gold);color:#0a1a0a;border-color:var(--gold)}
+.size-quick-btn{padding:5px 8px;border-radius:5px;font-size:10px;font-weight:600;font-family:inherit;cursor:pointer;background:var(--surface3);color:var(--text-dim);border:1px solid var(--border2)}
+.size-quick-btn:active{background:var(--border2)}
+.action-entry{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;margin-bottom:4px;font-size:11px}
+.action-entry.street-div{background:#0d2410;border:1px solid #1a4a1a;color:var(--green-accent);font-weight:700;font-size:10px;letter-spacing:1px}
+.action-entry.action-row{background:var(--surface3);border:1px solid var(--border)}
+.action-del{margin-left:auto;background:transparent;border:none;color:#f87171;cursor:pointer;font-size:12px;padding:0 2px;line-height:1}
+.ob-dot{width:6px;height:6px;border-radius:50%;background:#2a4a2a;transition:all .3s}
+.ob-dot.active{width:20px;border-radius:3px;background:#c9a227}
+.ob-slide{position:absolute;inset:0;transition:transform .35s cubic-bezier(.32,.72,0,1);overflow-y:auto}
+.ob-step{display:flex;gap:14px;align-items:flex-start;margin-bottom:22px;background:#0d1f0d;border-radius:12px;padding:14px}
+.ob-step-num{font-size:20px;font-weight:800;color:#c9a227;opacity:0.5;flex-shrink:0;line-height:1;margin-top:2px}
+::-webkit-scrollbar{display:none}
+</style>
+
+<!-- ── Onboarding ── -->
+<div id="onboarding" style="position:fixed;inset:0;z-index:9999;background:#071507;display:flex;flex-direction:column;touch-action:pan-y">
+  <!-- Progress dots -->
+  <div style="display:flex;justify-content:center;gap:8px;padding:52px 0 0">
+    <div class="ob-dot active" id="ob-dot-0"></div>
+    <div class="ob-dot" id="ob-dot-1"></div>
+    <div class="ob-dot" id="ob-dot-2"></div>
+  </div>
+
+  <!-- Slides -->
+  <div id="ob-slides" style="flex:1;overflow:hidden;position:relative">
+
+    <!-- Slide 0 -->
+    <div class="ob-slide" id="ob-slide-0" style="transform:translateX(0%)">
+      <div style="padding:40px 32px 0;text-align:center">
+        <div style="font-size:28px;font-weight:800;color:#c9a227;letter-spacing:3px;margin-bottom:8px">RINGDOM</div>
+        <div style="width:48px;height:2px;background:#c9a227;margin:0 auto 32px"></div>
+        <div style="font-size:20px;font-weight:700;color:#e8f0e8;line-height:1.6;margin-bottom:16px">
+          GTOではなく、<br>今夜の相手に勝つ。
+        </div>
+        <div style="font-size:14px;color:#7a9a7a;line-height:1.8">
+          リアルタイムで<br>エクスプロイト戦略を提示する<br>ポーカーツール
+        </div>
+        <div style="margin-top:48px;font-size:48px">♠</div>
+      </div>
+    </div>
+
+    <!-- Slide 1 -->
+    <div class="ob-slide" id="ob-slide-1" style="transform:translateX(100%)">
+      <div style="padding:32px 24px 0">
+        <div style="font-size:13px;color:#c9a227;letter-spacing:2px;font-weight:700;margin-bottom:24px;text-align:center">使い方</div>
+
+        <div class="ob-step">
+          <div class="ob-step-num">01</div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#e8f0e8;margin-bottom:4px">テーブルを設定する</div>
+            <div style="font-size:12px;color:#7a9a7a;line-height:1.7">席をダブルタップしてHeroを設定。<br>席をタップして相手の特徴を入力。<br>（タイト / ルース / フィッシュ など）</div>
+          </div>
+        </div>
+
+        <div class="ob-step">
+          <div class="ob-step-num">02</div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#e8f0e8;margin-bottom:4px">レンジが自動補正される</div>
+            <div style="font-size:12px;color:#7a9a7a;line-height:1.7">相手の傾向・スタック・レーキ・<br>人数を加味したオープンレンジを表示。<br>マスをタップで詳細確認。</div>
+          </div>
+        </div>
+
+        <div class="ob-step">
+          <div class="ob-step-num">03</div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#e8f0e8;margin-bottom:4px">EXPLOITで戦略確認</div>
+            <div style="font-size:12px;color:#7a9a7a;line-height:1.7">テーブル中央のEXPLOITボタンを押すと、<br>誰から搾取すべきか・ブラフは誰に<br>有効かをまとめて提示。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 2 -->
+    <div class="ob-slide" id="ob-slide-2" style="transform:translateX(100%)">
+      <div style="padding:40px 28px 0;text-align:center">
+        <div style="font-size:13px;color:#c9a227;letter-spacing:2px;font-weight:700;margin-bottom:24px">さあ始めよう</div>
+
+        <div style="background:#0d2410;border:1px solid #1a4a1a;border-radius:14px;padding:20px;margin-bottom:16px;text-align:left">
+          <div style="font-size:12px;color:#4ade80;font-weight:700;margin-bottom:8px">テーブルタブで</div>
+          <div style="font-size:12px;color:#a0c0a0;line-height:1.8">席を<span style="color:#c9a227;font-weight:700">ダブルタップ</span> → 自分のポジション設定<br>席を<span style="color:#c9a227;font-weight:700">タップ</span> → 相手プロフィール入力</div>
+        </div>
+
+        <div style="background:#0d1a2a;border:1px solid #1a3a5a;border-radius:14px;padding:20px;margin-bottom:16px;text-align:left">
+          <div style="font-size:12px;color:#60A5FA;font-weight:700;margin-bottom:8px">レンジタブで</div>
+          <div style="font-size:12px;color:#a0b0c0;line-height:1.8">ポジション・スタック・シナリオを<br>選んでレンジ表を確認</div>
+        </div>
+
+        <div style="background:#1a1200;border:1px solid #3a2a00;border-radius:14px;padding:20px;text-align:left">
+          <div style="font-size:12px;color:#c9a227;font-weight:700;margin-bottom:8px">Players タブで</div>
+          <div style="font-size:12px;color:#b0a080;line-height:1.8">よく対戦する相手を保存して<br>次回セッションですぐ呼び出し</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom buttons -->
+  <div style="padding:20px 24px 40px;display:flex;flex-direction:column;gap:10px">
+    <button id="ob-next-btn" onclick="obNext()" style="width:100%;padding:15px;border-radius:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;background:#c9a227;color:#0a1a0a;border:none">次へ</button>
+    <button onclick="obSkip()" style="width:100%;padding:10px;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;background:transparent;color:#3a5a3a;border:none">スキップ</button>
+  </div>
+</div>
+
+<div class="header">
+  <div>
+    <div class="header-title">♠ RINGDOM</div>
+
+  </div>
+  <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
+    <div class="size-btns">
+      <button class="size-btn active" onclick="setTableSize(6)">6max</button>
+      <button class="size-btn" onclick="setTableSize(7)">7</button>
+      <button class="size-btn" onclick="setTableSize(8)">8</button>
+      <button class="size-btn" onclick="setTableSize(9)">9</button>
+    </div>
+    <div class="size-btns">
+      <button id="rake-5" onclick="setRake(5)" style="padding:5px 10px;border-radius:4px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:1px solid var(--gold)">RAKE 5%</button>
+      <button id="rake-10" onclick="setRake(10)" style="padding:5px 10px;border-radius:4px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#f87171;border:1px solid #7a3a3a">RAKE 10%</button>
+    </div>
+  </div>
+</div>
+
+<div class="tabbar">
+  <div class="tab active" id="tab-table" onclick="switchTab('table')" style="font-size:10px;white-space:nowrap">テーブル</div>
+  <div class="tab" id="tab-range" onclick="switchTab('range')" style="font-size:10px;white-space:nowrap">レンジ</div>
+  <div class="tab" id="tab-eq" onclick="switchTab('eq')" style="font-size:10px;white-space:nowrap">EQ</div>
+  <div class="tab" id="tab-book" onclick="switchTab('book')" style="font-size:10px;white-space:nowrap">Players</div>
+  <div class="tab" id="tab-log" onclick="switchTab('log')" style="font-size:10px;white-space:nowrap">LOG</div>
+</div>
+
+<div class="content">
+  <div class="panel active" id="panel-table">
+    <div class="table-wrap">
+      <div class="table-svg-container">
+        <svg id="table-svg" viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
+          <defs>
+            <radialGradient id="g1" cx="50%" cy="50%" r="55%">
+              <stop offset="0%" stop-color="#1e6b1e"/>
+              <stop offset="100%" stop-color="#0a3a0a"/>
+            </radialGradient>
+          </defs>
+          <ellipse cx="100" cy="70" rx="96" ry="64" fill="#7a5c0a"/>
+          <ellipse cx="100" cy="70" rx="94" ry="62" fill="#0d3a0d"/>
+          <ellipse cx="100" cy="70" rx="90" ry="58" fill="url(#g1)"/>
+          <ellipse cx="100" cy="70" rx="70" ry="44" fill="#1a5c1a" opacity="0.3"/>
+          <!-- Exploit button - shown when conditions met -->
+          <g id="exploit-btn-g" style="display:none;cursor:pointer" onclick="showExploitAdvice()">
+            <rect x="68" y="58" width="64" height="24" rx="12" fill="#c9a227" opacity="0.95"/>
+            <text x="100" y="74" text-anchor="middle" font-size="7.5" fill="#0a1a0a" font-weight="bold">EXPLOIT</text>
+          </g>
+          <g id="exploit-btn-none" style="display:block">
+            <text x="100" y="65" text-anchor="middle" font-size="9" fill="#1a5c1a" font-weight="bold">♠ ♥</text>
+            <text x="100" y="78" text-anchor="middle" font-size="9" fill="#1a5c1a" font-weight="bold">♦ ♣</text>
+          </g>
+          <g id="seats-g"></g>
+        </svg>
+      </div>
+    </div>
+    <div class="hero-bar">
+      <div><div class="hero-label">HERO POSITION</div><div class="hero-pos" id="hero-pos-label">BTN</div></div>
+      <div style="text-align:right"><div class="hero-label" id="hero-range-label">RFI RANGE</div><div class="hero-pct normal" id="hero-pct-label">—%</div></div>
+    </div>
+    <div class="adj-list" id="adj-list" style="display:none">
+      <div class="adj-title">⚡ エクスプロイト補正 ACTIVE</div>
+      <div id="adj-items"></div>
+    </div>
+    <div class="seat-list" id="seat-list"></div>
+  </div>
+
+  <div class="panel" id="panel-range">
+    <div class="range-header">
+      <div class="range-title" id="range-title">BTN — RFI RANGE</div>
+      <div id="range-pct-top" style="font-size:12px;font-weight:700;color:var(--gold)">—%</div>
+    </div>
+    <!-- Position selector -->
+    <div id="pos-btns" style="display:flex;flex-wrap:nowrap;gap:5px;margin-bottom:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px"></div>
+    <!-- Stack size selector -->
+    <div style="margin-bottom:8px">
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:5px">スタックサイズ</div>
+      <div style="display:flex;gap:4px">
+        <button id="ss-20"  onclick="setStackSize(20)"  class="ss-btn">20BB</button>
+        <button id="ss-30"  onclick="setStackSize(30)"  class="ss-btn">30BB</button>
+        <button id="ss-50"  onclick="setStackSize(50)"  class="ss-btn">50BB</button>
+        <button id="ss-75"  onclick="setStackSize(75)"  class="ss-btn">75BB</button>
+        <button id="ss-100" onclick="setStackSize(100)" class="ss-btn active">100BB</button>
+        <button id="ss-200" onclick="setStackSize(200)" class="ss-btn">200BB</button>
+      </div>
+    </div>
+    <!-- Scenario selector -->
+    <div style="display:flex;gap:4px;margin-bottom:6px">
+      <button id="sc-rfi"    onclick="setScenario('RFI')"     style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:1px solid var(--gold)">RFI</button>
+      <button id="sc-3bep"  onclick="setScenario('3BET_EP')" style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#818CF8;border:1px solid #3a3060">3B vs EP</button>
+      <button id="sc-3blp"  onclick="setScenario('3BET_LP')" style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#F97316;border:1px solid #5c2a0a">3B vs LP</button>
+      <button id="sc-bbdef" onclick="setScenario('BB_DEF')"  style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#60A5FA;border:1px solid #1e3a5f">BB守備</button>
+    </div>
+    <!-- BB Defense villain position selector -->
+    <div id="bb-villain-row" style="display:none;margin-bottom:8px">
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:5px">相手のオープンポジション</div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap" id="bb-villain-btns"></div>
+    </div>
+    <!-- Dynamic legend -->
+    <div id="legend-rfi" class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div>100%レイズ</div>
+      <div class="legend-item"><div class="legend-dot" style="overflow:hidden;position:relative"><div style="position:absolute;top:0;left:0;bottom:0;width:60%;background:#16a34a"></div><div style="position:absolute;top:0;right:0;bottom:0;width:40%;background:#ca8a04"></div></div>ミックス</div>
+      <div class="legend-item"><div class="legend-dot" style="overflow:hidden;position:relative"><div style="position:absolute;top:0;left:0;bottom:0;width:35%;background:#b45309"></div><div style="position:absolute;top:0;right:0;bottom:0;width:65%;background:#111f11"></div></div>ブラフ</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#111f11;border:1px solid #2d3d2d"></div>フォールド</div>
+    </div>
+    <div id="legend-bbdef" class="legend" style="display:none">
+      <div class="legend-item"><div class="legend-dot" style="background:#7c3aed"></div>3-BET</div>
+      <div class="legend-item"><div class="legend-dot" style="overflow:hidden;position:relative"><div style="position:absolute;top:0;left:0;bottom:0;width:50%;background:#7c3aed"></div><div style="position:absolute;top:0;right:0;bottom:0;width:50%;background:#16a34a"></div></div>ミックス</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#16a34a"></div>コール</div>
+      <div class="legend-item"><div class="legend-dot" style="overflow:hidden;position:relative"><div style="position:absolute;top:0;left:0;bottom:0;width:40%;background:#16a34a"></div><div style="position:absolute;top:0;right:0;bottom:0;width:60%;background:#111f11"></div></div>コール一部</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#111f11;border:1px solid #2d3d2d"></div>フォールド</div>
+    </div>
+    <div class="matrix-scroll"><div class="matrix" id="matrix"></div></div>
+  </div>
+
+  <!-- Player Book Panel -->
+  <div class="panel" id="panel-book" style="background:var(--green-dark)">
+    <div style="padding:14px 16px 8px;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px">PLAYER BOOK</div>
+      <div style="font-size:10px;color:var(--text-dim)" id="book-count"></div>
+    </div>
+    <div style="margin:0 12px 12px;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px">
+      <div style="font-size:10px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">新規登録</div>
+      <input class="save-input" id="book-name-input" placeholder="プレイヤー名..." maxlength="20" style="width:100%;margin-bottom:8px">
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px">タグ選択：</div>
+      <div id="book-tag-btns" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+      <button onclick="savePlayerFromBook()" style="width:100%;padding:9px;border-radius:6px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--surface3);color:var(--green-accent);border:1px solid #1a5c1a">💾 保存</button>
+    </div>
+    <div id="book-list" style="padding:0 12px 20px"></div>
+  </div>
+
+  <!-- ── Play Log Panel ── -->
+  <div class="panel" id="panel-log" style="background:var(--green-dark);padding:12px 14px 20px;overflow-y:auto">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px">PLAY LOG</div>
+      <div style="font-size:9px;color:var(--text-dim)">Hero: <span id="log-hero-pos" style="color:var(--gold);font-weight:700"></span></div>
+    </div>
+    <!-- Hero position selector (shared with Range tab) -->
+    <div id="log-pos-btns" style="display:flex;flex-wrap:nowrap;gap:5px;margin-bottom:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px"></div>
+
+    <!-- Hero Hand Picker -->
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">自分のハンド（2枚選択）</div>
+      <div id="hero-hand-display" onclick="openCardPicker('hand')" style="display:flex;gap:8px;align-items:center;cursor:pointer;min-height:56px">
+        <div id="hero-card-0" class="card-slot">?</div>
+        <div id="hero-card-1" class="card-slot">?</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-left:4px">タップして選択</div>
+      </div>
+    </div>
+
+    <!-- Board Picker -->
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">ボード（最大5枚）</div>
+      <div id="board-display" onclick="openCardPicker('board')" style="display:flex;gap:6px;align-items:center;cursor:pointer;min-height:56px;flex-wrap:wrap">
+        <div id="board-card-0" class="card-slot">?</div>
+        <div id="board-card-1" class="card-slot">?</div>
+        <div id="board-card-2" class="card-slot">?</div>
+        <div style="width:1px;height:40px;background:var(--border2)"></div>
+        <div id="board-card-3" class="card-slot">?</div>
+        <div style="width:1px;height:40px;background:var(--border2)"></div>
+        <div id="board-card-4" class="card-slot">?</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-left:2px">タップして選択</div>
+      </div>
+    </div>
+
+
+    <!-- Action Builder -->
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">アクション経緯</div>
+        <button onclick="clearActions()" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">クリア</button>
+      </div>
+      <!-- Log display -->
+      <div id="action-log" style="margin-bottom:10px;min-height:32px"></div>
+      <!-- Street selector -->
+      <div style="display:flex;gap:5px;margin-bottom:10px">
+        <button onclick="addStreetDivider('preflop')"  class="street-btn" id="sb-pre"  style="flex:1">PF</button>
+        <button onclick="addStreetDivider('flop')"     class="street-btn" id="sb-flop" style="flex:1">Flop</button>
+        <button onclick="addStreetDivider('turn')"     class="street-btn" id="sb-turn" style="flex:1">Turn</button>
+        <button onclick="addStreetDivider('river')"    class="street-btn" id="sb-rvr"  style="flex:1">River</button>
+      </div>
+      <!-- Action input row -->
+      <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+        <select id="ab-player" style="flex:1;padding:7px 4px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:11px;outline:none"></select>
+        <select id="ab-action" onchange="onAbActionChange()" style="flex:1;padding:7px 4px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:11px;outline:none">
+          <option value="fold">Fold</option>
+          <option value="check">Check</option>
+          <option value="call">Call</option>
+          <option value="bet">Bet</option>
+          <option value="raise">Raise</option>
+          <option value="3bet">3-Bet</option>
+          <option value="allin">All-in</option>
+        </select>
+      </div>
+      <!-- Size input (shown for bet/raise/3bet) -->
+      <div id="ab-size-row" style="display:none;margin-bottom:8px">
+        <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">サイズ</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+          <button onclick="setAbSize('0.33')" class="size-quick-btn">1/3ポット</button>
+          <button onclick="setAbSize('0.5')"  class="size-quick-btn">1/2ポット</button>
+          <button onclick="setAbSize('0.75')" class="size-quick-btn">3/4ポット</button>
+          <button onclick="setAbSize('1')"    class="size-quick-btn">ポット</button>
+          <button onclick="setAbSize('2')"    class="size-quick-btn">2x</button>
+          <button onclick="setAbSize('2.5')"  class="size-quick-btn">2.5x</button>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="ab-size" type="number" placeholder="BBサイズ" step="0.5"
+            style="flex:1;padding:7px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;outline:none">
+          <span style="font-size:11px;color:var(--text-dim)">BB</span>
+        </div>
+      </div>
+      <button onclick="addAction()" style="width:100%;padding:9px;border-radius:7px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--surface3);color:var(--green-accent);border:1px solid #1a5c1a">＋ アクションを追加</button>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:12px">
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">評価してほしいポイント</div>
+      <textarea id="log-question" rows="2" placeholder="例: 3betは正しかった？ベットサイズは？" style="width:100%;padding:8px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;outline:none;resize:none;line-height:1.5"></textarea>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:14px;text-align:center">
+      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:4px">AI評価機能</div>
+      <div style="font-size:11px;color:var(--text-dim);line-height:1.6">正式リリース時に実装予定です。<br>アクション経緯の記録機能は引き続き使用できます。</div>
+    </div>
+  </div><div class="panel" id="panel-eq" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--green-dark);padding:12px 14px 20px;overflow-y:auto;z-index:10;display:none">
+  <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:12px">EQUITY CALCULATOR</div>
+
+  <!-- Hero hand -->
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">★ ヒーローのハンド (2枚)</div>
+    <div onclick="openEqPicker('hero')" style="display:flex;gap:8px;align-items:center;cursor:pointer;min-height:54px">
+      <div id="eq-hero-0" class="card-slot">?</div>
+      <div id="eq-hero-1" class="card-slot">?</div>
+      <div style="font-size:11px;color:var(--text-dim);margin-left:4px">タップして選択</div>
+    </div>
+  </div>
+
+  <!-- Villain -->
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">相手</div>
+      <div style="display:flex;gap:4px">
+        <button id="eq-mode-hand-btn" onclick="setEqMode('hand')" style="padding:5px 12px;border-radius:5px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:none">特定ハンド</button>
+        <button id="eq-mode-range-btn" onclick="setEqMode('range')" style="padding:5px 12px;border-radius:5px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-dim);border:1px solid var(--border2)">レンジ</button>
+      </div>
+    </div>
+    <div id="eq-villain-hand-section">
+      <div onclick="openEqPicker('villain')" style="display:flex;gap:8px;align-items:center;cursor:pointer;min-height:54px">
+        <div id="eq-villain-0" class="card-slot">?</div>
+        <div id="eq-villain-1" class="card-slot">?</div>
+        <div style="font-size:11px;color:var(--text-dim);margin-left:4px">タップして選択</div>
+      </div>
+    </div>
+    <div id="eq-villain-range-section" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div id="eq-range-count" style="font-size:10px;color:var(--green-accent)">0コンボ</div>
+        <div style="display:flex;gap:4px">
+          <button onclick="setEqRangePreset('top10')" style="padding:3px 8px;border-radius:4px;font-size:9px;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-dim);border:1px solid var(--border2)">Top10%</button>
+          <button onclick="setEqRangePreset('top20')" style="padding:3px 8px;border-radius:4px;font-size:9px;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-dim);border:1px solid var(--border2)">Top20%</button>
+          <button onclick="setEqRangePreset('top30')" style="padding:3px 8px;border-radius:4px;font-size:9px;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-dim);border:1px solid var(--border2)">Top30%</button>
+          <button onclick="clearEqRange()" style="padding:3px 8px;border-radius:4px;font-size:9px;font-family:inherit;cursor:pointer;background:transparent;color:#f87171;border:1px solid #5c1a1a">クリア</button>
+        </div>
+      </div>
+      <div id="eq-range-matrix" style="overflow-x:auto"></div>
+    </div>
+  </div>
+
+  <!-- Board -->
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">ボード (0〜5枚)</div>
+    <div onclick="openEqPicker('board')" style="display:flex;gap:6px;align-items:center;cursor:pointer;min-height:54px;flex-wrap:wrap">
+      <div id="eq-board-0" class="card-slot">?</div>
+      <div id="eq-board-1" class="card-slot">?</div>
+      <div id="eq-board-2" class="card-slot">?</div>
+      <div style="width:1px;height:36px;background:var(--border2)"></div>
+      <div id="eq-board-3" class="card-slot">?</div>
+      <div style="width:1px;height:36px;background:var(--border2)"></div>
+      <div id="eq-board-4" class="card-slot">?</div>
+    </div>
+  </div>
+
+  <button onclick="calculateEquity()" id="eq-calc-btn"
+    style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:none;margin-bottom:14px">
+    ♠ エクイティを計算する
+  </button>
+
+  <!-- Results -->
+  <div id="eq-results" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:16px">
+    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:12px">計算結果 (5,000試行)</div>
+    <div style="position:relative;height:28px;border-radius:8px;overflow:hidden;margin-bottom:8px;background:#111">
+      <div id="eq-bar-hero" style="position:absolute;top:0;left:0;bottom:0;background:linear-gradient(90deg,#16a34a,#22c55e);transition:width .6s ease"></div>
+      <div id="eq-bar-tie"  style="position:absolute;top:0;bottom:0;background:#475569;transition:all .6s ease"></div>
+      <div id="eq-bar-vil"  style="position:absolute;top:0;right:0;bottom:0;background:linear-gradient(90deg,#dc2626,#ef4444);transition:width .6s ease"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px">
+      <div style="text-align:center">
+        <div style="font-size:9px;color:#4ade80;margin-bottom:2px">★ HERO</div>
+        <div id="eq-pct-hero" style="font-size:32px;font-weight:800;color:#4ade80;line-height:1"></div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:9px;color:#94A3B8;margin-bottom:2px">TIE</div>
+        <div id="eq-pct-tie" style="font-size:18px;font-weight:700;color:#94A3B8;line-height:1"></div>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:9px;color:#f87171;margin-bottom:2px">VILLAIN</div>
+        <div id="eq-pct-vil" style="font-size:32px;font-weight:800;color:#f87171;line-height:1"></div>
+      </div>
+    </div>
+    <div id="eq-hand-info" style="font-size:11px;color:var(--text-dim);text-align:center;line-height:1.7;padding-top:10px;border-top:1px solid var(--border)"></div>
+  </div>
+</div>
+
+</div>
+
+
+
+<!-- ── Equity Panel ── -->
+<div id="card-picker-overlay" onclick="closeCardPicker()" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;opacity:0;pointer-events:none;transition:opacity .2s;display:flex;flex-direction:column;justify-content:flex-end">
+  <div onclick="event.stopPropagation()" style="background:#0d1f0d;border-top:1.5px solid var(--gold-dim);border-radius:18px 18px 0 0;padding:14px 12px 24px;max-height:88vh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 12px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div id="picker-title" style="font-size:13px;font-weight:700;color:var(--gold)">カードを選択</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="clearPickerSelection()" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;font-family:inherit;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer">クリア</button>
+        <button onclick="closeCardPicker()" style="padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;font-family:inherit;background:var(--gold);color:#0a1a0a;border:none;cursor:pointer">完了</button>
+      </div>
+    </div>
+    <!-- Selected preview -->
+    <div id="picker-preview" style="display:flex;gap:6px;min-height:44px;margin-bottom:12px;flex-wrap:wrap;align-items:center"></div>
+    <!-- Card grid by suit -->
+    <div id="picker-grid"></div>
+  </div>
+</div>
+
+<!-- Hand Detail Modal -->
+<div id="hand-modal-overlay" onclick="closeHandModal()" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:center;justify-content:center">
+  <div id="hand-modal" onclick="event.stopPropagation()" style="width:82%;max-width:320px;background:#0d1f0d;border:1.5px solid var(--gold-dim);border-radius:16px;padding:20px;transform:scale(0.85);transition:transform .2s">
+    <div style="text-align:center;margin-bottom:16px">
+      <div id="hm-hand" style="font-size:36px;font-weight:800;color:var(--gold);letter-spacing:2px"></div>
+      <div id="hm-type" style="font-size:11px;color:var(--text-dim);margin-top:2px;letter-spacing:1.5px"></div>
+    </div>
+    <!-- Visual bar -->
+    <div style="margin-bottom:16px">
+      <div id="hm-bar" style="height:20px;border-radius:6px;overflow:hidden;margin-bottom:6px"></div>
+      <div id="hm-bar-labels" style="display:flex;justify-content:space-between;font-size:10px;color:var(--text-dim)"></div>
+    </div>
+    <!-- Stats -->
+    <div id="hm-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px"></div>
+    <!-- Adjust info -->
+    <div id="hm-adj" style="font-size:10px;color:var(--text-dim);background:var(--surface3);border-radius:6px;padding:8px 10px;line-height:1.6;display:none"></div>
+    <button onclick="closeHandModal()" style="width:100%;margin-top:14px;padding:10px;border-radius:8px;background:var(--surface3);color:var(--text-dim);border:1px solid var(--border2);font-family:inherit;font-size:12px;cursor:pointer">閉じる</button>
+  </div>
+</div>
+
+<!-- Exploit Advice Modal -->
+<div id="exploit-overlay" onclick="closeExploitModal()" style="position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:flex-end;justify-content:center">
+  <div id="exploit-modal" onclick="event.stopPropagation()" style="width:100%;max-width:480px;background:#0d1f0d;border-top:2px solid #c9a227;border-radius:18px 18px 0 0;padding:16px 16px 32px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:85vh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:#2a4a2a;border-radius:2px;margin:0 auto 14px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;color:#c9a227;letter-spacing:2px">EXPLOIT ADVISOR</div>
+      <button onclick="closeExploitModal()" style="background:transparent;border:none;color:#5a7a5a;font-size:18px;cursor:pointer;padding:0">✕</button>
+    </div>
+    <div id="exploit-content"></div>
+  </div>
+</div>
+
+<div class="sheet-overlay" id="overlay" onclick="closeSheet()"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div><div class="sheet-title" id="sheet-title">Seat Tags</div><div class="sheet-pos" id="sheet-sub"></div></div>
+    <button class="sheet-close" onclick="closeSheet()">✕</button>
+  </div>
+  <!-- Saved players -->
+  <div id="sheet-players"></div>
+  <!-- Tag section -->
+  <div class="sheet-section">タグ選択</div>
+  <div class="sheet-tags" id="sheet-tags"></div>
+  <!-- Save as player -->
+  <div class="save-row">
+    <input class="save-input" id="player-name-input" placeholder="プレイヤー名を入力..." maxlength="20">
+    <button class="save-btn" onclick="savePlayer()">💾 保存</button>
+  </div>
+  <div class="sheet-hint" id="sheet-hint"></div>
+</div>
+
+<script>
+const RANKS=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+const POSITIONS_MAP={6:['BTN','SB','BB','UTG','HJ','CO'],7:['BTN','SB','BB','UTG','MP','HJ','CO'],8:['BTN','SB','BB','UTG','UTG+1','MP','HJ','CO'],9:['BTN','SB','BB','UTG','UTG+1','MP','MP+1','HJ','CO']};
+// ── 3軸 + 特殊傾向 プレイヤーモデル（各軸3段階）────────────
+// VPIP軸: 0=タイト, 1=普通, 2=ルース
+const VPIP_META=[
+  {label:'タイト', emoji:'🔒', color:'#60A5FA'},
+  {label:'普通',   emoji:'➖', color:'#6b8f6b'},
+  {label:'ルース', emoji:'🎲', color:'#F97316'},
+];
+// アグレッション軸: 0=パッシブ, 1=普通, 2=アグレッシブ
+const AGG_META=[
+  {label:'パッシブ',   emoji:'🕊️', color:'#94A3B8'},
+  {label:'普通',       emoji:'➖', color:'#6b8f6b'},
+  {label:'アグレッシブ',emoji:'🔥', color:'#F87171'},
+];
+// スキル軸: 0=フィッシュ, 1=普通, 2=GTO
+const SKILL_META=[
+  {label:'フィッシュ', emoji:'🐟', color:'#C084FC'},
+  {label:'普通',       emoji:'➖', color:'#6b8f6b'},
+  {label:'シャーク',   emoji:'🦈', color:'#06b6d4'},
+];
+// 特殊傾向タグ（複数選択可）
+const TEND_META={
+  station: {label:'ステーション', emoji:'📞', color:'#FBBF24', bg:'#2a2000',
+            desc:'コール率が異常に高い。フォールドをほぼしない。バリューベットを大きく、ブラフは厳禁。'},
+  folder:  {label:'フォールダー', emoji:'📉', color:'#94A3B8', bg:'#0d1520',
+            desc:'フロップ以降のCベットにほぼ折れる。Cベット頻度を上げ、ブラフを積極化。'},
+  maniac:  {label:'マニアック',   emoji:'🌪️', color:'#F87171', bg:'#2a0808',
+            desc:'無謀なブラフや過大ベットが多い。プレミアムでコールトラップ。4-betバリューを拡大。'},
+  nitroll: {label:'ニットロール', emoji:'🏦', color:'#38bdf8', bg:'#0d1f3a',
+            desc:'プレミアムハンドしかプレイしない超タイト。3-betには必ずフォールド。スティール最大化。'},
+};
+const ALL_TENDS=Object.keys(TEND_META);
+// デフォルトプロフィール
+function defaultProfile(){return{vpip:1,agg:1,skill:1,tends:[]};}
+function profileOf(i){return state.seatProfiles[i]||defaultProfile();}
+const BASE_RFI={BTN:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':1,'77':1,'66':1,'55':.8,'44':.6,'33':.45,'22':.35,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':1,'A7s':1,'A6s':1,'A5s':1,'A4s':1,'A3s':1,'A2s':.9,'KQs':1,'KJs':1,'KTs':1,'K9s':1,'K8s':.7,'K7s':.5,'QJs':1,'QTs':1,'Q9s':.7,'Q8s':.4,'JTs':1,'J9s':.8,'J8s':.4,'T9s':1,'T8s':.8,'T7s':.4,'98s':1,'97s':.7,'96s':.3,'87s':1,'86s':.5,'76s':1,'75s':.4,'65s':1,'64s':.3,'54s':.9,'53s':.4,'AKo':1,'AQo':1,'AJo':1,'ATo':1,'A9o':.7,'A8o':.4,'KQo':1,'KJo':1,'KTo':.8,'K9o':.5,'QJo':1,'QTo':.7,'Q9o':.3,'JTo':1,'J9o':.4,'T9o':.5,'98o':.3},CO:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':1,'77':1,'66':.8,'55':.6,'44':.4,'33':.25,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':1,'A7s':.8,'A6s':.7,'A5s':1,'A4s':.7,'A3s':.5,'KQs':1,'KJs':1,'KTs':1,'K9s':.7,'K8s':.4,'QJs':1,'QTs':1,'Q9s':.5,'JTs':1,'J9s':.7,'T9s':1,'T8s':.5,'98s':.8,'87s':.6,'76s':.5,'AKo':1,'AQo':1,'AJo':1,'ATo':.8,'KQo':1,'KJo':1,'KTo':.6,'QJo':1,'QTo':.5,'JTo':.7},HJ:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.8,'77':.6,'66':.4,'55':.3,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':.8,'A7s':.6,'A5s':1,'A4s':.6,'KQs':1,'KJs':1,'KTs':.8,'K9s':.5,'QJs':1,'QTs':1,'Q9s':.4,'JTs':1,'J9s':.5,'T9s':.8,'98s':.5,'87s':.4,'AKo':1,'AQo':1,'AJo':1,'ATo':.6,'KQo':1,'KJo':1,'KTo':.4,'QJo':.7},MP:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.7,'77':.5,'66':.3,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':.8,'A8s':.5,'A5s':.8,'KQs':1,'KJs':1,'KTs':.7,'QJs':1,'QTs':.8,'JTs':1,'T9s':.5,'AKo':1,'AQo':1,'AJo':1,'ATo':.5,'KQo':1,'KJo':.7,'QJo':.5},UTG:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':.9,'88':.6,'77':.4,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':.7,'A5s':.6,'KQs':1,'KJs':1,'KTs':.6,'QJs':1,'QTs':.7,'JTs':1,'AKo':1,'AQo':1,'AJo':.7,'KQo':1},SB:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.9,'77':.7,'66':.5,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':.8,'A5s':1,'A4s':.7,'KQs':1,'KJs':1,'KTs':.9,'K9s':.6,'QJs':1,'QTs':.9,'JTs':1,'AKo':1,'AQo':1,'AJo':1,'ATo':.7,'KQo':1,'KJo':.8,'QJo':.7},BB:{}};
+BASE_RFI['UTG+1']={...BASE_RFI.UTG};BASE_RFI['MP+1']={...BASE_RFI.MP};
+
+// ── 3-Bet Ranges (GTO base, 100bb) ───────────────────────────
+// EP = vs UTG/UTG+1/MP opener (tight range → value-heavy 3bet)
+// LP = vs CO/BTN opener (wide range → more bluffs ok)
+const BASE_3BET_EP={
+  BTN:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':.6,'AKs':1,'AKo':1,'AQs':.8,'AJs':.3,'A5s':.7,'A4s':.5,'KQs':.4,'QQ':1},
+  CO: {'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':.5,'AKs':1,'AKo':1,'AQs':.7,'A5s':.6,'A4s':.4},
+  HJ: {'AA':1,'KK':1,'QQ':1,'JJ':.8,'AKs':1,'AKo':1,'AQs':.5,'A5s':.4},
+  SB: {'AA':1,'KK':1,'QQ':1,'JJ':.7,'AKs':1,'AKo':1,'AQs':.4,'A5s':.5,'A4s':.3},
+  BB: {'AA':1,'KK':1,'QQ':1,'JJ':.8,'TT':.4,'AKs':1,'AKo':1,'AQs':.6,'AJs':.3,'A5s':.6,'A4s':.4,'KQs':.3},
+  MP: {'AA':1,'KK':1,'QQ':1,'JJ':.5,'AKs':1,'AKo':.9,'AQs':.3},
+  UTG:{'AA':1,'KK':1,'QQ':.8,'AKs':1,'AKo':.8},
+};
+BASE_3BET_EP['UTG+1']={...BASE_3BET_EP.UTG};
+BASE_3BET_EP['MP+1']={...BASE_3BET_EP.MP};
+
+const BASE_3BET_LP={
+  BTN:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':.8,'99':.4,'AKs':1,'AKo':1,'AQs':1,'AJs':.7,'ATs':.4,'A5s':.9,'A4s':.7,'A3s':.5,'KQs':.6,'JTs':.4,'T9s':.3},
+  SB: {'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':.7,'AKs':1,'AKo':1,'AQs':.9,'AJs':.5,'A5s':.8,'A4s':.6,'A3s':.4,'KQs':.5,'JTs':.3},
+  BB: {'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':.8,'99':.5,'AKs':1,'AKo':1,'AQs':1,'AJs':.7,'ATs':.4,'A5s':1,'A4s':.8,'A3s':.6,'A2s':.4,'KQs':.7,'KJs':.3,'JTs':.5,'T9s':.4},
+  CO: {'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':.6,'AKs':1,'AKo':1,'AQs':.8,'AJs':.4,'A5s':.7,'A4s':.5,'KQs':.4},
+  HJ: {'AA':1,'KK':1,'QQ':1,'JJ':.8,'TT':.4,'AKs':1,'AKo':1,'AQs':.6,'A5s':.5,'A4s':.3},
+  MP: {'AA':1,'KK':1,'QQ':1,'JJ':.6,'AKs':1,'AKo':.9,'AQs':.4,'A5s':.3},
+  UTG:{'AA':1,'KK':1,'QQ':.8,'AKs':1,'AKo':.7},
+};
+BASE_3BET_LP['UTG+1']={...BASE_3BET_LP.UTG};
+BASE_3BET_LP['MP+1']={...BASE_3BET_LP.MP};
+
+// ── BBディフェンスレンジ ───────────────────────────────────────
+// {hand: {c: callFreq, t: 3betFreq}}   fold = 1 - c - t
+// Villain open position: BTN / CO / HJ / MP / UTG / SB
+const BASE_BB_DEF = {
+  BTN:{ // vs BTN (~45% open) → 広く守備
+    'AA':{c:0,t:1},'KK':{c:0,t:1},'QQ':{c:0.3,t:0.7},'JJ':{c:0.5,t:0.5},'TT':{c:0.85,t:0.15},
+    '99':{c:1,t:0},'88':{c:1,t:0},'77':{c:1,t:0},'66':{c:1,t:0},'55':{c:1,t:0},
+    '44':{c:1,t:0},'33':{c:1,t:0},'22':{c:1,t:0},
+    'AKs':{c:0,t:1},'AKo':{c:0.1,t:0.9},'AQs':{c:0.3,t:0.7},'AQo':{c:0.6,t:0.4},
+    'AJs':{c:0.6,t:0.4},'AJo':{c:0.9,t:0.1},'ATs':{c:0.8,t:0.2},'ATo':{c:1,t:0},
+    'A9s':{c:1,t:0},'A8s':{c:1,t:0},'A7s':{c:0.9,t:0},'A6s':{c:0.8,t:0},
+    'A5s':{c:0.3,t:0.7},'A4s':{c:0.4,t:0.6},'A3s':{c:0.5,t:0.5},'A2s':{c:0.6,t:0.4},
+    'A9o':{c:0.8,t:0},'A8o':{c:0.6,t:0},'A7o':{c:0.4,t:0},'A6o':{c:0.2,t:0},
+    'KQs':{c:0.7,t:0.3},'KQo':{c:0.9,t:0.1},'KJs':{c:1,t:0},'KJo':{c:0.9,t:0},
+    'KTs':{c:1,t:0},'KTo':{c:0.7,t:0},'K9s':{c:1,t:0},'K9o':{c:0.3,t:0},
+    'K8s':{c:0.7,t:0},'K7s':{c:0.5,t:0},'K6s':{c:0.3,t:0},
+    'QJs':{c:1,t:0},'QJo':{c:0.8,t:0},'QTs':{c:1,t:0},'QTo':{c:0.5,t:0},
+    'Q9s':{c:0.8,t:0},'Q9o':{c:0.2,t:0},'Q8s':{c:0.5,t:0},
+    'JTs':{c:0.8,t:0.2},'JTo':{c:0.6,t:0},'J9s':{c:0.9,t:0},'J9o':{c:0.3,t:0},
+    'J8s':{c:0.5,t:0},'T9s':{c:1,t:0},'T9o':{c:0.4,t:0},'T8s':{c:0.8,t:0},
+    'T7s':{c:0.3,t:0},'98s':{c:0.9,t:0.1},'98o':{c:0.2,t:0},'97s':{c:0.7,t:0},
+    '96s':{c:0.3,t:0},'87s':{c:0.9,t:0},'87o':{c:0.2,t:0},'86s':{c:0.5,t:0},
+    '76s':{c:0.9,t:0.1},'75s':{c:0.4,t:0},'65s':{c:0.8,t:0},'64s':{c:0.3,t:0},
+    '54s':{c:0.7,t:0},'53s':{c:0.3,t:0},'43s':{c:0.3,t:0},
+  },
+  CO:{ // vs CO (~35%) → やや絞る
+    'AA':{c:0,t:1},'KK':{c:0,t:1},'QQ':{c:0.2,t:0.8},'JJ':{c:0.4,t:0.6},'TT':{c:0.8,t:0.2},
+    '99':{c:1,t:0},'88':{c:1,t:0},'77':{c:1,t:0},'66':{c:0.9,t:0},'55':{c:0.8,t:0},
+    '44':{c:0.7,t:0},'33':{c:0.6,t:0},'22':{c:0.5,t:0},
+    'AKs':{c:0,t:1},'AKo':{c:0.1,t:0.9},'AQs':{c:0.2,t:0.8},'AQo':{c:0.5,t:0.5},
+    'AJs':{c:0.5,t:0.5},'AJo':{c:0.8,t:0.2},'ATs':{c:0.8,t:0.2},'ATo':{c:1,t:0},
+    'A9s':{c:1,t:0},'A8s':{c:0.9,t:0},'A7s':{c:0.7,t:0},'A6s':{c:0.5,t:0},
+    'A5s':{c:0.2,t:0.8},'A4s':{c:0.3,t:0.7},'A3s':{c:0.4,t:0.5},'A2s':{c:0.5,t:0.4},
+    'A9o':{c:0.6,t:0},'A8o':{c:0.4,t:0},'A7o':{c:0.2,t:0},
+    'KQs':{c:0.6,t:0.4},'KQo':{c:0.8,t:0.2},'KJs':{c:0.9,t:0.1},'KJo':{c:0.7,t:0},
+    'KTs':{c:1,t:0},'KTo':{c:0.5,t:0},'K9s':{c:0.9,t:0},'K9o':{c:0.2,t:0},
+    'K8s':{c:0.5,t:0},'K7s':{c:0.3,t:0},
+    'QJs':{c:1,t:0},'QJo':{c:0.6,t:0},'QTs':{c:1,t:0},'QTo':{c:0.3,t:0},
+    'Q9s':{c:0.7,t:0},'Q8s':{c:0.3,t:0},
+    'JTs':{c:0.7,t:0.2},'JTo':{c:0.4,t:0},'J9s':{c:0.8,t:0},'J8s':{c:0.4,t:0},
+    'T9s':{c:0.9,t:0},'T8s':{c:0.7,t:0},'T7s':{c:0.2,t:0},
+    '98s':{c:0.8,t:0},'97s':{c:0.5,t:0},'87s':{c:0.7,t:0},'86s':{c:0.3,t:0},
+    '76s':{c:0.8,t:0},'75s':{c:0.2,t:0},'65s':{c:0.6,t:0},'54s':{c:0.5,t:0},
+  },
+  HJ:{ // vs HJ (~27%)
+    'AA':{c:0,t:1},'KK':{c:0,t:1},'QQ':{c:0.1,t:0.9},'JJ':{c:0.3,t:0.7},'TT':{c:0.7,t:0.3},
+    '99':{c:0.9,t:0.1},'88':{c:1,t:0},'77':{c:1,t:0},'66':{c:0.8,t:0},'55':{c:0.7,t:0},
+    '44':{c:0.5,t:0},'33':{c:0.4,t:0},'22':{c:0.3,t:0},
+    'AKs':{c:0,t:1},'AKo':{c:0.1,t:0.9},'AQs':{c:0.1,t:0.9},'AQo':{c:0.4,t:0.6},
+    'AJs':{c:0.4,t:0.6},'AJo':{c:0.7,t:0.3},'ATs':{c:0.7,t:0.3},'ATo':{c:0.9,t:0.1},
+    'A9s':{c:0.9,t:0},'A8s':{c:0.8,t:0},'A7s':{c:0.5,t:0},'A6s':{c:0.3,t:0},
+    'A5s':{c:0.2,t:0.8},'A4s':{c:0.2,t:0.7},'A3s':{c:0.3,t:0.5},'A2s':{c:0.4,t:0.4},
+    'A8o':{c:0.3,t:0},'A7o':{c:0.1,t:0},
+    'KQs':{c:0.5,t:0.5},'KQo':{c:0.7,t:0.3},'KJs':{c:0.8,t:0.2},'KJo':{c:0.6,t:0},
+    'KTs':{c:0.9,t:0},'KTo':{c:0.4,t:0},'K9s':{c:0.7,t:0},'K8s':{c:0.3,t:0},
+    'QJs':{c:0.9,t:0},'QJo':{c:0.5,t:0},'QTs':{c:0.9,t:0},'QTo':{c:0.2,t:0},
+    'Q9s':{c:0.5,t:0},'JTs':{c:0.7,t:0.1},'JTo':{c:0.3,t:0},'J9s':{c:0.7,t:0},
+    'T9s':{c:0.8,t:0},'T8s':{c:0.5,t:0},'98s':{c:0.7,t:0},'97s':{c:0.4,t:0},
+    '87s':{c:0.6,t:0},'76s':{c:0.6,t:0},'65s':{c:0.5,t:0},'54s':{c:0.4,t:0},
+  },
+  MP:{ // vs MP (~22%)
+    'AA':{c:0,t:1},'KK':{c:0,t:1},'QQ':{c:0.1,t:0.9},'JJ':{c:0.2,t:0.8},'TT':{c:0.5,t:0.5},
+    '99':{c:0.8,t:0.2},'88':{c:0.9,t:0},'77':{c:1,t:0},'66':{c:0.7,t:0},'55':{c:0.5,t:0},
+    '44':{c:0.4,t:0},'33':{c:0.3,t:0},'22':{c:0.2,t:0},
+    'AKs':{c:0,t:1},'AKo':{c:0,t:1},'AQs':{c:0.1,t:0.9},'AQo':{c:0.3,t:0.7},
+    'AJs':{c:0.3,t:0.7},'AJo':{c:0.6,t:0.4},'ATs':{c:0.6,t:0.4},'ATo':{c:0.8,t:0.2},
+    'A9s':{c:0.8,t:0},'A8s':{c:0.6,t:0},'A7s':{c:0.4,t:0},
+    'A5s':{c:0.1,t:0.9},'A4s':{c:0.2,t:0.7},'A3s':{c:0.2,t:0.5},'A2s':{c:0.3,t:0.4},
+    'KQs':{c:0.4,t:0.6},'KQo':{c:0.6,t:0.4},'KJs':{c:0.7,t:0.3},'KJo':{c:0.5,t:0},
+    'KTs':{c:0.8,t:0},'KTo':{c:0.3,t:0},'K9s':{c:0.5,t:0},
+    'QJs':{c:0.8,t:0},'QJo':{c:0.3,t:0},'QTs':{c:0.7,t:0},'Q9s':{c:0.4,t:0},
+    'JTs':{c:0.6,t:0.1},'J9s':{c:0.5,t:0},'T9s':{c:0.6,t:0},'T8s':{c:0.4,t:0},
+    '98s':{c:0.5,t:0},'87s':{c:0.4,t:0},'76s':{c:0.4,t:0},'65s':{c:0.3,t:0},
+  },
+  UTG:{ // vs UTG (~16%) → タイトに守備
+    'AA':{c:0,t:1},'KK':{c:0,t:1},'QQ':{c:0,t:1},'JJ':{c:0.1,t:0.9},'TT':{c:0.4,t:0.6},
+    '99':{c:0.7,t:0.3},'88':{c:0.9,t:0},'77':{c:1,t:0},'66':{c:0.6,t:0},'55':{c:0.4,t:0},
+    '44':{c:0.3,t:0},'33':{c:0.2,t:0},
+    'AKs':{c:0,t:1},'AKo':{c:0,t:1},'AQs':{c:0,t:1},'AQo':{c:0.2,t:0.8},
+    'AJs':{c:0.2,t:0.8},'AJo':{c:0.5,t:0.5},'ATs':{c:0.5,t:0.5},'ATo':{c:0.7,t:0.3},
+    'A9s':{c:0.6,t:0},'A8s':{c:0.4,t:0},
+    'A5s':{c:0,t:1},'A4s':{c:0.1,t:0.8},'A3s':{c:0.2,t:0.5},'A2s':{c:0.2,t:0.4},
+    'KQs':{c:0.2,t:0.8},'KQo':{c:0.4,t:0.6},'KJs':{c:0.5,t:0.5},'KJo':{c:0.4,t:0},
+    'KTs':{c:0.7,t:0},'KTo':{c:0.2,t:0},'K9s':{c:0.4,t:0},
+    'QJs':{c:0.6,t:0},'QJo':{c:0.2,t:0},'QTs':{c:0.5,t:0},'Q9s':{c:0.3,t:0},
+    'JTs':{c:0.5,t:0},'J9s':{c:0.3,t:0},'T9s':{c:0.4,t:0},'98s':{c:0.3,t:0},
+    '87s':{c:0.3,t:0},'76s':{c:0.3,t:0},'65s':{c:0.2,t:0},
+  },
+  SB:{ // vs SB (wide open) → 広く守備、3-betも多め
+    'AA':{c:0,t:1},'KK':{c:0,t:1},'QQ':{c:0.1,t:0.9},'JJ':{c:0.3,t:0.7},'TT':{c:0.6,t:0.4},
+    '99':{c:0.8,t:0.2},'88':{c:1,t:0},'77':{c:1,t:0},'66':{c:1,t:0},'55':{c:1,t:0},
+    '44':{c:1,t:0},'33':{c:0.9,t:0},'22':{c:0.8,t:0},
+    'AKs':{c:0,t:1},'AKo':{c:0,t:1},'AQs':{c:0.2,t:0.8},'AQo':{c:0.4,t:0.6},
+    'AJs':{c:0.4,t:0.6},'AJo':{c:0.7,t:0.3},'ATs':{c:0.6,t:0.4},'ATo':{c:0.9,t:0.1},
+    'A9s':{c:0.9,t:0.1},'A8s':{c:1,t:0},'A7s':{c:0.9,t:0},'A6s':{c:0.7,t:0},
+    'A5s':{c:0.3,t:0.7},'A4s':{c:0.4,t:0.6},'A3s':{c:0.5,t:0.5},'A2s':{c:0.6,t:0.4},
+    'A9o':{c:0.9,t:0},'A8o':{c:0.7,t:0},'A7o':{c:0.5,t:0},'A6o':{c:0.3,t:0},
+    'KQs':{c:0.6,t:0.4},'KQo':{c:0.8,t:0.2},'KJs':{c:1,t:0},'KJo':{c:0.9,t:0},
+    'KTs':{c:1,t:0},'KTo':{c:0.7,t:0},'K9s':{c:1,t:0},'K9o':{c:0.4,t:0},
+    'K8s':{c:0.8,t:0},'K7s':{c:0.6,t:0},'K6s':{c:0.4,t:0},
+    'QJs':{c:1,t:0},'QJo':{c:0.8,t:0},'QTs':{c:1,t:0},'QTo':{c:0.5,t:0},
+    'Q9s':{c:0.9,t:0},'Q9o':{c:0.2,t:0},'Q8s':{c:0.6,t:0},
+    'JTs':{c:0.9,t:0.1},'JTo':{c:0.6,t:0},'J9s':{c:1,t:0},'J9o':{c:0.3,t:0},
+    'J8s':{c:0.6,t:0},'T9s':{c:1,t:0},'T9o':{c:0.4,t:0},'T8s':{c:0.9,t:0},
+    'T7s':{c:0.4,t:0},'98s':{c:1,t:0},'97s':{c:0.7,t:0},'96s':{c:0.3,t:0},
+    '87s':{c:1,t:0},'86s':{c:0.5,t:0},'76s':{c:1,t:0},'75s':{c:0.4,t:0},
+    '65s':{c:0.9,t:0},'64s':{c:0.3,t:0},'54s':{c:0.8,t:0},'53s':{c:0.3,t:0},'43s':{c:0.3,t:0},
+  },
+};
+BASE_BB_DEF['UTG+1']={...BASE_BB_DEF.UTG};
+BASE_BB_DEF['MP+1']={...BASE_BB_DEF.MP};
+
+let villainOpenPos='BTN';
+const DECAY=[0,1.0,0.55,0.30,0.15,0.08];
+// ── 3軸 × 左右 × 距離 補正テーブル（3段階）─────────────────
+const VPIP_L=[1.20,1.00,0.85]; // タイト/普通/ルース → スティール倍率
+const VPIP_R=[1.08,1.00,0.95]; // タイト/普通/ルース → 前方強度
+const AGG_L= [1.12,1.00,0.85]; // パッシブ/普通/アグレ → 3betリスク
+const AGG_R= [1.05,1.00,0.88]; // パッシブ/普通/アグレ → スクイーズ
+const SKILL_M=[1.10,1.00,0.94];// フィッシュ/普通/GTO → エクスプロイト
+
+function computeAdj(){
+  const n=state.tableSize,hi=state.heroIdx;
+  const adj=[];let rMult=1;
+  for(let dist=1;dist<n;dist++){
+    const decay=DECAY[Math.min(dist,DECAY.length-1)];
+    // ── 後方（左側）
+    const li=(hi+dist)%n;
+    const lp=profileOf(li);
+    const distL=dist===1?'左隣':`左${dist}席目`;
+    // VPIP
+    {const base=VPIP_L[lp.vpip];const m=1+(base-1)*decay;rMult*=m;
+     if(Math.abs(m-1)>.01)adj.push({axis:'VPIP',side:'L',dist,mult:m,
+       reason:`[${distL}] ${VPIP_META[lp.vpip].emoji}${VPIP_META[lp.vpip].label} → スティール${m>1?'拡大':'縮小'}`,color:VPIP_META[lp.vpip].color});}
+    // AGG
+    {const base=AGG_L[lp.agg];const m=1+(base-1)*decay;rMult*=m;
+     if(Math.abs(m-1)>.01)adj.push({axis:'AGG',side:'L',dist,mult:m,
+       reason:`[${distL}] ${AGG_META[lp.agg].emoji}${AGG_META[lp.agg].label} → 3betリスク${m>1?'低':'高'}`,color:AGG_META[lp.agg].color});}
+    // SKILL
+    {const base=SKILL_M[lp.skill];const m=1+(base-1)*decay;rMult*=m;
+     if(Math.abs(m-1)>.01)adj.push({axis:'SKL',side:'L',dist,mult:m,
+       reason:`[${distL}] ${SKILL_META[lp.skill].emoji}${SKILL_META[lp.skill].label} → エクスプロイト${m>1?'拡大':'縮小'}`,color:SKILL_META[lp.skill].color});}
+    // 特殊傾向
+    lp.tends.forEach(t=>{
+      let tm=1,reason='';
+      if(t==='station'){tm=1+(0.08*decay);reason=`[${distL}] ステーション→バリュースティール拡大`;}
+      if(t==='folder') {tm=1+(0.12*decay);reason=`[${distL}] フォールダー→Cベット積極化`;}
+      if(t==='nitroll'){tm=1+(0.18*decay);reason=`[${distL}] ニットロール→スティール最大化`;}
+      if(t==='maniac') {tm=1+(-0.12*decay);reason=`[${distL}] マニアック→3betリスク高・縮小`;}
+      rMult*=tm;
+      if(Math.abs(tm-1)>.01)adj.push({axis:'TEND',side:'L',dist,mult:tm,reason,color:TEND_META[t].color});
+    });
+    // ── 前方（右側）
+    const ri2=(hi-dist+n)%n;
+    const rp=profileOf(ri2);
+    const distR=dist===1?'右隣':`右${dist}席目`;
+    {const base=VPIP_R[rp.vpip];const m=1+(base-1)*decay;rMult*=m;
+     if(Math.abs(m-1)>.01)adj.push({axis:'VPIP',side:'R',dist,mult:m,
+       reason:`[${distR}] ${VPIP_META[rp.vpip].emoji}${VPIP_META[rp.vpip].label} → 前方レンジ${m>1?'タイト':'ルース'}`,color:VPIP_META[rp.vpip].color});}
+    {const base=AGG_R[rp.agg];const m=1+(base-1)*decay;rMult*=m;
+     if(Math.abs(m-1)>.01)adj.push({axis:'AGG',side:'R',dist,mult:m,
+       reason:`[${distR}] ${AGG_META[rp.agg].emoji}${AGG_META[rp.agg].label} → スクイーズ${m>1?'少':'多'}`,color:AGG_META[rp.agg].color});}
+    {const base=SKILL_M[rp.skill];const m=1+(base-1)*decay;rMult*=m;
+     if(Math.abs(m-1)>.01)adj.push({axis:'SKL',side:'R',dist,mult:m,
+       reason:`[${distR}] ${SKILL_META[rp.skill].emoji}${SKILL_META[rp.skill].label} → 対応${m>1?'易':'難'}`,color:SKILL_META[rp.skill].color});}
+    rp.tends.forEach(t=>{
+      let tm=1,reason='';
+      if(t==='station'){tm=1+(-0.05*decay);reason=`[${distR}] ステーション→コール多・慎重に`;}
+      if(t==='folder') {tm=1+(0.06*decay);reason=`[${distR}] フォールダー→ブラフ3bet有効`;}
+      if(t==='nitroll'){tm=1+(0.08*decay);reason=`[${distR}] ニットロール→オープン強い・3bet縮小`;}
+      if(t==='maniac') {tm=1+(-0.10*decay);reason=`[${distR}] マニアック→スクイーズリスク高`;}
+      rMult*=tm;
+      if(Math.abs(tm-1)>.01)adj.push({axis:'TEND',side:'R',dist,mult:tm,reason,color:TEND_META[t].color});
+    });
+  }
+  return{adj,rMult};
+}
+
+let state={tableSize:6,heroIdx:0,seatProfiles:{},activeSheet:null,currentTab:'table',rake:5,scenario:'RFI',stackSize:100};
+
+// ── スタックサイズ別レンジ補正 ─────────────────────────────────
+// ベース頻度を5カテゴリに分類し、スタックサイズ別に乗数を適用。
+// 短いスタック → インプライドオッズ依存ハンドが-EV化
+// 深いスタック → 投機的ハンドのEV向上
+const STACK_MULTS = {
+  200: { premium:1.00, strong:1.04, medium:1.10, marginal:1.18, bluff:1.25 },
+  100: { premium:1.00, strong:1.00, medium:1.00, marginal:1.00, bluff:1.00 },
+   75: { premium:1.00, strong:0.98, medium:0.90, marginal:0.80, bluff:0.70 },
+   50: { premium:1.00, strong:0.95, medium:0.75, marginal:0.55, bluff:0.35 },
+   30: { premium:1.00, strong:0.88, medium:0.55, marginal:0.30, bluff:0.12 },
+   20: { premium:1.00, strong:0.80, medium:0.35, marginal:0.12, bluff:0.04 },
+};
+
+function stackCategory(freq){
+  if(freq>=0.90) return 'premium';
+  if(freq>=0.65) return 'strong';
+  if(freq>=0.35) return 'medium';
+  if(freq>=0.12) return 'marginal';
+  return 'bluff';
+}
+
+function applyStackAdj(freq){
+  if(state.stackSize===100) return freq;
+  const mults=STACK_MULTS[state.stackSize]||STACK_MULTS[100];
+  const cat=stackCategory(freq);
+  return Math.min(1,Math.max(0,freq*mults[cat]));
+}
+
+function setStackSize(n){
+  state.stackSize=n;
+  document.querySelectorAll('.ss-btn').forEach(b=>{
+    const v=parseInt(b.id.replace('ss-',''));
+    b.classList.toggle('active',v===n);
+  });
+  renderAll();
+  if(state.currentTab==='range') renderMatrix();
+}
+
+function applyRakeAdj(f){
+  if(state.rake===5)return f;
+  if(f>=.90)return f*.97;
+  if(f>=.60)return f*.88;
+  if(f>=.30)return f*.72;
+  if(f>=.10)return f*.50;
+  return f*.20;
+}
+
+function pos(){return POSITIONS_MAP[state.tableSize]}
+function li(){return(state.heroIdx+1)%state.tableSize}
+function ri(){return(state.heroIdx-1+state.tableSize)%state.tableSize}
+function heroPos(){return pos()[state.heroIdx]}
+function profileColor(i){
+  const p=profileOf(i);
+  if(p.tends.includes('nitroll')) return TEND_META.nitroll.color;
+  if(p.tends.includes('maniac'))  return TEND_META.maniac.color;
+  if(p.tends.includes('folder'))  return TEND_META.folder.color;
+  if(p.tends.includes('station')) return TEND_META.station.color;
+  return VPIP_META[p.vpip].color;
+}
+function hasProfile(i){
+  const p=profileOf(i);
+  return p.vpip!==1||p.agg!==1||p.skill!==1||p.tends.length>0;
+}
+
+function seatCoords(n){const cx=100,cy=70,rx=82,ry=52;return Array.from({length:n},(_,i)=>{const a=2*Math.PI*(i-state.heroIdx)/n+Math.PI/2;return{x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)}})}
+
+function getBaseMap(){
+  const hp=heroPos();
+  if(state.scenario==='3BET_EP') return BASE_3BET_EP[hp]||{};
+  if(state.scenario==='3BET_LP') return BASE_3BET_LP[hp]||{};
+  if(state.scenario==='BB_DEF')  return {}; // BB_DEF uses separate renderer
+  return BASE_RFI[hp]||{};
+}
+// ── テーブル人数によるレンジ補正 ─────────────────────────────
+// 6maxをベースラインとして、各ポジションの「後ろにいる人数」を計算。
+// 人数が増えるほどUTG/MPのマージナルハンドが-EV化する。
+// BTN/CO/SBはほぼ影響なし（後ろの人数が変わらないため）。
+function calcTableSizeMult(){
+  if(state.scenario!=='RFI') return 1; // 3betシナリオは人数影響なし
+  const pos=heroPos();
+  // 6maxでの各ポジションの後ろ人数（ベースライン）
+  const baseline6={BTN:2,SB:1,BB:0,UTG:5,HJ:4,CO:3};
+  const baseActors=baseline6[pos]??4;
+  // 現テーブルでの後ろ人数 = テーブル人数 - 1 - heroIdx（BTNを0とした席順）
+  // シンプルに: heroIdx = BTNから何席目か (0=BTN)
+  // 後ろにいる人数 = tableSize - 1 - heroIdx
+  const heroI=state.heroIdx; // 0=BTN
+  const actorsNow=state.tableSize-1-heroI;
+  const extra=actorsNow-baseActors;
+  if(extra<=0) return 1; // 6max以下 or BTN/CO等 → 補正なし
+  // 1人増えるごとにマージナルを約4%縮小、最大20%縮小
+  return Math.max(0.80, 1-extra*0.04);
+}
+
+// ── インプライドオッズ補正 ────────────────────────────────────
+// ステーション/ルース/パッシブが多いほど投機ハンドのEVが上がる
+function calcImpliedOddsMult(){
+  if(state.scenario!=='RFI') return{mult:1,callerCount:0};
+  const n=state.tableSize,hi=state.heroIdx;
+  let callerScore=0;
+  for(let i=0;i<n;i++){
+    if(i===hi) continue;
+    const pro=profileOf(i);
+    if(!hasProfile(i)) continue;
+    // ルース(+1)、パッシブ(+0.5)、ステーション(+1.5) の合算
+    if(pro.vpip===2) callerScore+=1.0;
+    if(pro.agg===0)  callerScore+=0.5;
+    if(pro.tends.includes('station')) callerScore+=1.5;
+  }
+  // callerScore 0→倍率1.0、3以上→倍率1.20
+  const mult=1+Math.min(callerScore/3,1)*0.20;
+  return{mult,callerScore};
+}
+
+// ハンドが投機的かどうか判定（インプライドオッズ依存ハンド）
+function isSpeculativeHand(key){
+  // 小ペア: 22〜66
+  const smallPairs=['22','33','44','55','66'];
+  if(smallPairs.includes(key)) return true;
+  // スーテッドコネクター・1ギャッパー
+  if(key.endsWith('s')){
+    const r1=RANKS.indexOf(key[0]);
+    const r2=RANKS.indexOf(key[1]);
+    const gap=Math.abs(r1-r2);
+    if(gap<=2&&r1>=4) return true; // T9s以下のスーテッド系
+  }
+  // スーテッドエース（A2s〜A6s）
+  if(key.endsWith('s')&&key[0]==='A'){
+    const r2=key[1];
+    if(['2','3','4','5','6'].includes(r2)) return true;
+  }
+  return false;
+}
+
+function buildRaiseMap(){
+  const base=getBaseMap();
+  const{rMult}=computeAdj();
+  const sizeMult=calcTableSizeMult();
+  const{mult:impliedMult,callerScore}=calcImpliedOddsMult();
+  const out={};
+  for(const[k,v]of Object.entries(base)){
+    // 1. Rake adjustment
+    const raked=state.scenario==='RFI'?applyRakeAdj(v):v;
+    // 2. Stack size adjustment
+    const stacked=state.scenario==='RFI'?applyStackAdj(raked):raked;
+    // 3. Table size adjustment (player count)
+    const sized=stacked>=0.95?stacked:stacked>=0.70?1-(1-stacked)*(1/sizeMult)*0.5:stacked*sizeMult;
+    const sizedClamped=Math.min(1,Math.max(0,sized));
+    // 4. Implied odds: 投機ハンドをコーラー比例で拡大（ブラフ域のみ）
+    let impliedAdj=sizedClamped;
+    if(state.scenario==='RFI'&&isSpeculativeHand(k)&&sizedClamped<0.70){
+      impliedAdj=Math.min(0.70,sizedClamped*impliedMult);
+    }
+    // 5. Exploit adjustment (with premium protection)
+    let adjusted;
+    if(impliedAdj>=0.95){
+      adjusted=rMult>1?Math.min(1,impliedAdj*rMult):impliedAdj;
+    } else if(impliedAdj>=0.70){
+      const dampedMult=1+(rMult-1)*0.5;
+      adjusted=Math.min(1,Math.max(0,impliedAdj*dampedMult));
+    } else {
+      adjusted=Math.min(1,Math.max(0,impliedAdj*rMult));
+    }
+    out[k]=adjusted;
+  }
+  return{base,adjusted:out,rMult,sizeMult,impliedMult,callerScore};
+}
+
+function calcPct(map){return(Object.values(map).filter(v=>v>.05).length/169*100).toFixed(1)}
+
+function cellBg(f){if(f>=.95)return'#16a34a';if(f>=.5)return'#ca8a04';if(f>=.1)return'#b45309';return'#111f11'}
+function cellFg(f){return f>=.1?'#e2f0e2':'#2a3a2a'}
+
+function renderTable(){
+  const g=document.getElementById('seats-g');g.innerHTML='';
+  const coords=seatCoords(state.tableSize),p=pos(),l=li(),r=ri();
+  const NS='http://www.w3.org/2000/svg';
+  coords.forEach(({x,y},i)=>{
+    const isHero=i===state.heroIdx,isL=i===l,isR=i===r,hasPro=hasProfile(i)&&!isHero;
+    if(isHero){const el=document.createElementNS(NS,'circle');el.setAttribute('cx',x);el.setAttribute('cy',y);el.setAttribute('r','11');el.setAttribute('fill','none');el.setAttribute('stroke','#c9a227');el.setAttribute('stroke-width','1');el.setAttribute('opacity','.5');g.appendChild(el)}
+    const c=document.createElementNS(NS,'circle');c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r','9.5');c.setAttribute('fill',isHero?'#c9a227':hasPro?'#0d1f35':'#0d1a0d');c.setAttribute('stroke',isHero?'#f0d060':isL?'#60A5FA':isR?'#F97316':'#2d4d2d');c.setAttribute('stroke-width',isHero||isL||isR?'1.2':'0.6');if(!isHero){c.style.cursor='pointer';c.addEventListener('click',()=>openSheet(i))}g.appendChild(c);
+    const t=document.createElementNS(NS,'text');t.setAttribute('x',x);t.setAttribute('y',y+1.5);t.setAttribute('text-anchor','middle');t.setAttribute('font-size','4.5');t.setAttribute('fill',isHero?'#0a1a0a':'#90b890');t.setAttribute('font-weight',isHero?'bold':'normal');t.setAttribute('font-family','monospace');t.textContent=isHero?'★':p[i];if(!isHero){t.style.cursor='pointer';t.addEventListener('click',()=>openSheet(i))}g.appendChild(t);
+    // Player name label
+    const pname=state.seatProfiles[i]?.name||'';
+    if(pname&&!isHero){
+      // Position label above seat (pos text shifts slightly)
+      const posT=document.createElementNS(NS,'text');
+      posT.setAttribute('x',x);posT.setAttribute('y',y+1.5);
+      posT.setAttribute('text-anchor','middle');posT.setAttribute('font-size','3.2');
+      posT.setAttribute('fill','#90b890');posT.setAttribute('font-family','monospace');
+      posT.textContent=p[i];posT.style.cursor='pointer';
+      posT.addEventListener('click',()=>openSheet(i));
+      // Overwrite the previous text with position above, name below
+      t.setAttribute('y',y-2);t.setAttribute('font-size','3.2');
+      // Name text below
+      const nt=document.createElementNS(NS,'text');
+      nt.setAttribute('x',x);nt.setAttribute('y',y+4.5);
+      nt.setAttribute('text-anchor','middle');nt.setAttribute('font-size','3.8');
+      nt.setAttribute('fill','#c9a227');nt.setAttribute('font-weight','700');
+      nt.setAttribute('font-family','Inter,monospace');
+      // Truncate long names
+      nt.textContent=pname.length>6?pname.slice(0,5)+'…':pname;
+      nt.style.cursor='pointer';
+      nt.addEventListener('click',()=>openSheet(i));
+      g.appendChild(nt);
+    }
+    if(hasPro){const d=document.createElementNS(NS,'circle');d.setAttribute('cx',x+7);d.setAttribute('cy',y-7);d.setAttribute('r','3');d.setAttribute('fill',profileColor(i));d.style.cursor='pointer';d.addEventListener('click',()=>openSheet(i));g.appendChild(d)}
+    if(!isHero){
+      let last=0;
+      let didDoubleTap=false;
+      const h=document.createElementNS(NS,'circle');
+      h.setAttribute('cx',x);h.setAttribute('cy',y);h.setAttribute('r','11');
+      h.setAttribute('fill','transparent');h.style.cursor='pointer';
+      h.addEventListener('touchend',e=>{
+        const now=Date.now();
+        if(now-last<350){
+          e.preventDefault();
+          didDoubleTap=true;
+          setHero(i);
+        } else {
+          didDoubleTap=false;
+        }
+        last=now;
+      });
+      h.addEventListener('click',()=>{
+        if(didDoubleTap){didDoubleTap=false;return;}
+        openSheet(i);
+      });
+      g.appendChild(h);
+    }
+  });
+}
+
+function scenarioLabel(){
+  if(state.scenario==='3BET_EP') return '3BET vs EP';
+  if(state.scenario==='3BET_LP') return '3BET vs LP';
+  return 'RFI';
+}
+function renderHeroBar(){
+  const{adjusted,rMult,sizeMult,impliedMult,callerScore}=buildRaiseMap(),pct=calcPct(adjusted),hasAdj=Math.abs(rMult-1)>.01||(state.rake===10&&state.scenario==='RFI')||(sizeMult&&sizeMult<0.99)||(impliedMult&&impliedMult>1.01);
+  document.getElementById('hero-pos-label').textContent=heroPos();
+  document.getElementById('hero-range-label').textContent=scenarioLabel()+' RANGE';
+  const el=document.getElementById('hero-pct-label');el.textContent=pct+'%';el.className='hero-pct '+(hasAdj?'adjusted':'normal');
+  document.getElementById('range-title').textContent=heroPos()+' — '+scenarioLabel();
+  const rt=document.getElementById('range-pct-top');rt.textContent=pct+'%';rt.style.color=hasAdj?'var(--green-accent)':'var(--gold)';
+  const{adj}=computeAdj(),al=document.getElementById('adj-list'),ai=document.getElementById('adj-items');
+  const sizeItems=(sizeMult&&sizeMult<0.99)?
+    [`<div class="adj-item"><span class="adj-tag" style="color:#FBBF24">[${state.tableSize}max]</span> 人数増でUTG/MP圧縮 <span style="color:#f87171">(×${sizeMult.toFixed(2)})</span></div>`]:[];
+  const stackItems=(state.stackSize!==100)?[`<div class="adj-item"><span class="adj-tag" style="color:${state.stackSize<100?'#f87171':'#4ade80'}">[${state.stackSize}BB]</span> ${state.stackSize<100?'ショートスタック：投機ハンド縮小':'ディープ：投機ハンド拡大'}</div>`]:[];
+  const rakeItems=(state.rake===10&&state.scenario==='RFI')?
+    [`<div class="adj-item"><span class="adj-tag" style="color:#f87171">[RAKE 10%]</span> マージナルハンドを縮小</div>`]:[];
+  const adjItems=adj.map(a=>{
+    const pct2=((a.mult-1)*100);
+    const pctStr=(pct2>0?'+':'')+pct2.toFixed(0)+'%';
+    return`<div class="adj-item"><span class="adj-tag" style="color:${a.color}">${a.reason}</span> <span style="color:${a.mult>1?'#4ade80':'#f87171'}">(${pctStr})</span></div>`;
+  });
+  const impliedItems=(impliedMult&&impliedMult>1.01)?
+    [`<div class="adj-item"><span class="adj-tag" style="color:#60A5FA">[コーラー多]</span> 投機ハンド(SC/小ペア/A-suited)拡大 <span style="color:#4ade80">(×${impliedMult.toFixed(2)})</span></div>`]:[];
+  const allItems=[...sizeItems,...stackItems,...impliedItems,...rakeItems,...adjItems];
+  if(allItems.length>0){
+    al.style.display='block';
+    // 3件以上は折りたたむ
+    const showAll=al.dataset.expanded==='1';
+    const visible=showAll?allItems:allItems.slice(0,3);
+    const more=allItems.length-3;
+    ai.innerHTML=visible.join('')+
+      (allItems.length>3?`<div style="font-size:10px;color:#4ade80;cursor:pointer;margin-top:4px" onclick="toggleAdjExpand()">${showAll?'▲ 折りたたむ':'▼ あと'+more+'件'}</div>`:'');
+  }else{al.style.display='none'}
+}
+
+function toggleAdjExpand(){
+  const al=document.getElementById('adj-list');
+  al.dataset.expanded=al.dataset.expanded==='1'?'0':'1';
+  renderHeroBar();
+}
+
+function renderSeatList(){
+  const p=pos(),l=li(),r=ri();
+  document.getElementById('seat-list').innerHTML=p.map((seat,i)=>{
+    if(i===state.heroIdx)return'';
+    const pro=profileOf(i),isL=i===l,isR=i===r;
+    const cls=isL?'seat-row left-n':isR?'seat-row right-n':'seat-row';
+    const dir=isL?`<div class="seat-dir" style="color:#60A5FA">◀ 左隣（後方）</div>`:isR?`<div class="seat-dir" style="color:#F97316">▶ 右隣（前方）</div>`:'';
+    const hasP=hasProfile(i);
+    let proHtml='';
+    if(!hasP){
+      proHtml=`<span class="add-tag">＋ 設定する</span>`;
+    } else {
+      const vc=VPIP_META[pro.vpip],ac=AGG_META[pro.agg],sc=SKILL_META[pro.skill];
+      proHtml=`<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <div style="display:flex;gap:4px;font-size:10px">
+          ${pro.vpip!==1?`<span style="color:${vc.color}">${vc.emoji}${vc.label}</span>`:''}
+          ${pro.agg!==1?`<span style="color:${ac.color}">${ac.emoji}${ac.label}</span>`:''}
+          ${pro.skill!==1?`<span style="color:${sc.color}">${sc.emoji}${sc.label}</span>`:''}
+        </div>
+        ${pro.tends.length>0?`<div style="display:flex;gap:4px">${pro.tends.map(t=>`<span style="font-size:10px;padding:1px 7px;border-radius:10px;background:${TEND_META[t].bg};color:${TEND_META[t].color};border:1px solid ${TEND_META[t].color}60">${TEND_META[t].emoji}${TEND_META[t].label}</span>`).join('')}</div>`:''}
+      </div>`;
+    }
+    return`<div class="${cls}" onclick="openSheet(${i})"><div>${dir}<div class="seat-pos">${seat}</div></div><div class="seat-tags">${proHtml}</div></div>`;
+  }).join('');
+}
+
+function renderMatrix(){
+  if(state.scenario==='BB_DEF'){ renderBBDefMatrix(); return; }
+  const{base,adjusted}=buildRaiseMap();
+  const panel=document.getElementById('panel-range');
+  const containerW=panel.clientWidth||window.innerWidth;
+  const rowHeaderW=20;
+  const gap=2;
+  const cw=Math.floor((containerW-24-rowHeaderW-gap*13)/13);
+  const ch=Math.max(22,Math.floor(cw*0.85));
+  const fsHand=Math.max(5.5,cw*0.30);
+
+  // 2-div split bar instead of CSS gradient (more reliable cross-browser)
+  function cellBars(freq){
+    if(freq>=0.95) return`<div style="position:absolute;inset:0;background:#16a34a"></div>`;
+    const pct=Math.round(freq*100);
+    const rest=100-pct;
+    if(freq>=0.50){
+      return`<div style="position:absolute;top:0;left:0;bottom:0;width:${pct}%;background:#16a34a"></div>`+
+             `<div style="position:absolute;top:0;right:0;bottom:0;width:${rest}%;background:#ca8a04"></div>`;
+    }
+    if(freq>=0.10){
+      return`<div style="position:absolute;top:0;left:0;bottom:0;width:${pct}%;background:#b45309"></div>`+
+             `<div style="position:absolute;top:0;right:0;bottom:0;width:${rest}%;background:#111f11"></div>`;
+    }
+    return`<div style="position:absolute;inset:0;background:#111f11"></div>`;
+  }
+
+  function handLabel(r1,r2,ri,ci){
+    if(ri===ci) return r1;
+    if(ri<ci)   return r1+r2;
+    return r2+r1;
+  }
+
+  // Column headers
+  let html=`<div style="display:flex;margin-left:${rowHeaderW}px;margin-bottom:2px">`;
+  RANKS.forEach(r=>{
+    html+=`<div style="width:${cw}px;margin:0 ${gap/2}px;text-align:center;font-size:${Math.max(6,cw*0.28)}px;color:var(--text-dim);flex-shrink:0">${r}</div>`;
+  });
+  html+='</div>';
+
+  RANKS.forEach((r1,ri)=>{
+    html+=`<div style="display:flex;margin-bottom:${gap}px;align-items:center">`;
+    html+=`<div style="width:${rowHeaderW}px;font-size:${Math.max(6,cw*0.28)}px;color:var(--text-dim);text-align:right;padding-right:3px;flex-shrink:0">${r1}</div>`;
+    RANKS.forEach((r2,ci)=>{
+      const key=ri===ci?r1+r2:ri<ci?r1+r2+'s':r2+r1+'o';
+      const freq=adjusted[key]??0;
+      const bf=base[key]??0;
+      const delta=freq-bf;
+      const isSuited=ri<ci,isPair=ri===ci;
+      const suitColor=isPair?'#c9a227':isSuited?'#60A5FA':'#94A3B8';
+      const label=handLabel(r1,r2,ri,ci);
+      html+=`<div style="width:${cw}px;height:${ch}px;border:1px solid #2a3a2a;border-radius:2px;margin:0 ${gap/2}px;flex-shrink:0;position:relative;overflow:hidden;cursor:pointer"
+        onclick="showHandDetail('${key}',${freq.toFixed(3)},${bf.toFixed(3)})">
+        ${cellBars(freq)}
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div style="font-size:${fsHand}px;font-weight:800;color:rgba(255,255,255,0.92);line-height:1;text-shadow:0 1px 3px rgba(0,0,0,0.8)">${label}</div>
+        </div>
+        <div style="position:absolute;bottom:1px;right:2px;font-size:${Math.max(5,cw*0.22)}px;color:${suitColor};opacity:0.75;line-height:1;text-shadow:0 1px 2px rgba(0,0,0,0.9)">${isPair?'p':isSuited?'s':'o'}</div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+
+  document.getElementById('matrix').innerHTML=html;
+}
+
+// ── Player Book (localStorage) ────────────────────────────────
+function loadPlayers(){try{return JSON.parse(localStorage.getItem('pokerPlayers')||'[]')}catch{return[]}}
+function savePlayers(players){try{localStorage.setItem('pokerPlayers',JSON.stringify(players))}catch{}}
+
+function savePlayer(){
+  const input=document.getElementById('player-name-input');
+  const name=input.value.trim();
+  if(!name)return;
+  const seatIdx=state.activeSheet;if(seatIdx===null)return;
+  const profile=profileOf(seatIdx);
+  if(!hasProfile(seatIdx)){alert('プロフィールを設定してください');return;}
+  const players=loadPlayers();
+  const idx=players.findIndex(p=>p.name===name);
+  if(idx>=0)players[idx]={name,profile};
+  else players.push({name,profile});
+  savePlayers(players);input.value='';
+  renderSheetPlayers(seatIdx);
+}
+
+function applyPlayer(seatIdx,playerName){
+  const players=loadPlayers();
+  const p=players.find(p=>p.name===playerName);
+  if(!p)return;
+  state.seatProfiles[seatIdx]={...(p.profile||{vpip:1,agg:1,skill:1,tends:[]}),name:playerName};
+  renderAll();openSheet(seatIdx);
+}
+
+function deletePlayer(playerName){
+  const players=loadPlayers().filter(p=>p.name!==playerName);
+  savePlayers(players);
+  if(state.activeSheet!==null) renderSheetPlayers(state.activeSheet);
+  if(state.currentTab==='book') renderBookList();
+}
+
+function renderSheetPlayers(seatIdx){
+  const players=loadPlayers();
+  const el=document.getElementById('sheet-players');
+  if(players.length===0){el.innerHTML='';return;}
+  el.innerHTML=`<div class="sheet-section">プレイヤー帳</div>`+
+    players.map(p=>{
+      const pro=p.profile||{vpip:2,agg:2,skill:2,tends:[]};
+      const summary=[
+        pro.vpip!==1?VPIP_META[pro.vpip].emoji+VPIP_META[pro.vpip].label:null,
+        pro.agg!==1?AGG_META[pro.agg].emoji+AGG_META[pro.agg].label:null,
+        pro.skill!==1?SKILL_META[pro.skill].emoji+SKILL_META[pro.skill].label:null,
+        ...pro.tends.map(t=>TEND_META[t].emoji+TEND_META[t].label)
+      ].filter(Boolean).join(' ');
+      return`<div class="player-row">
+        <div class="player-name">${p.name}</div>
+        <div style="font-size:10px;color:var(--text-dim);flex:2">${summary}</div>
+        <button class="player-apply-btn" onclick="applyPlayer(${seatIdx},'${p.name}')">適用</button>
+        <button class="player-del-btn" onclick="deletePlayer('${p.name}')">✕</button>
+      </div>`;
+    }).join('');
+}
+
+// 矛盾チェック: axis変更後のprofileで矛盾がないか
+function getConflicts(pro){
+  const conflicts=new Set();
+  // タイト + ステーション/マニアック
+  if(pro.vpip===0){
+    if(pro.tends.includes('station')) conflicts.add('station');
+    if(pro.tends.includes('maniac'))  conflicts.add('maniac');
+  }
+  // ルース + ニットロール
+  if(pro.vpip===2){
+    if(pro.tends.includes('nitroll')) conflicts.add('nitroll');
+  }
+  // パッシブ + マニアック
+  if(pro.agg===0){
+    if(pro.tends.includes('maniac')) conflicts.add('maniac');
+  }
+  // アグレ + ステーション/フォールダー
+  if(pro.agg===2){
+    if(pro.tends.includes('station')) conflicts.add('station');
+    if(pro.tends.includes('folder'))  conflicts.add('folder');
+  }
+  // ステーション + フォールダー（互いに矛盾）
+  if(pro.tends.includes('station')&&pro.tends.includes('folder')){
+    conflicts.add('station');conflicts.add('folder');
+  }
+  // マニアック + フォールダー（矛盾）
+  if(pro.tends.includes('maniac')&&pro.tends.includes('folder')){
+    conflicts.add('maniac');conflicts.add('folder');
+  }
+  // ステーション + マニアック（矛盾）
+  if(pro.tends.includes('station')&&pro.tends.includes('maniac')){
+    conflicts.add('station');conflicts.add('maniac');
+  }
+  // マニアック + ニットロール（矛盾）
+  if(pro.tends.includes('maniac')&&pro.tends.includes('nitroll')){
+    conflicts.add('maniac');conflicts.add('nitroll');
+  }
+  return conflicts;
+}
+
+// axis選択時に矛盾する傾向を自動解除
+function setAxis(seatIdx,axis,val){
+  const pro={...profileOf(seatIdx),[axis]:val};
+  // 矛盾する傾向を自動削除
+  const newPro={...pro};
+  if(axis==='vpip'){
+    if(val===0) newPro.tends=pro.tends.filter(t=>t!=='station'&&t!=='maniac');
+    if(val===2) newPro.tends=pro.tends.filter(t=>t!=='nitroll');
+  }
+  if(axis==='agg'){
+    if(val===0) newPro.tends=pro.tends.filter(t=>t!=='maniac');
+    if(val===2) newPro.tends=pro.tends.filter(t=>t!=='station');
+  }
+  state.seatProfiles[seatIdx]=newPro;
+  renderAll();openSheet(seatIdx);
+}
+
+function toggleTend(seatIdx,tend){
+  const pro=profileOf(seatIdx);
+  if(pro.tends.includes(tend)){
+    // 解除
+    const tends=pro.tends.filter(t=>t!==tend);
+    state.seatProfiles[seatIdx]={...pro,tends};
+  } else {
+    // 追加前に矛盾チェック — 矛盾なら無視
+    const testPro={...pro,tends:[...pro.tends,tend]};
+    const conflicts=getConflicts(testPro);
+    if(conflicts.has(tend)) return; // 矛盾するので追加しない
+    state.seatProfiles[seatIdx]={...pro,tends:[...pro.tends,tend]};
+  }
+  renderAll();openSheet(seatIdx);
+}
+
+function axisBtn(seatIdx,axis,meta,cur){
+  const pro=profileOf(seatIdx);
+  return meta.map((m,v)=>{
+    const active=cur===v;
+    // この軸値を選んだときに矛盾が生じるか確認
+    const testPro={...pro,[axis]:v};
+    // 既存のtendencyと矛盾するか（conflictsにtendencyが入るか）
+    const conflicts=getConflicts(testPro);
+    const wouldBreakTend=pro.tends.some(t=>conflicts.has(t));
+    const disabled=!active&&wouldBreakTend;
+    const bg=active?m.color+'33':disabled?'transparent':'transparent';
+    const border=active?m.color:disabled?'#1a2a1a':'var(--border2)';
+    const color=active?m.color:disabled?'#2a3a2a':'var(--text-dim)';
+    return`<button onclick="${disabled?'':('setAxis('+seatIdx+',\''+axis+'\','+v+')')}"
+      style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;
+      cursor:${disabled?'not-allowed':'pointer'};background:${bg};color:${color};
+      border:1px solid ${border};min-height:40px;display:flex;flex-direction:column;align-items:center;gap:1px;
+      opacity:${disabled?'0.35':'1'}"
+      ${disabled?'title="現在の特殊傾向と矛盾します"':''}>
+      <span style="font-size:14px">${m.emoji}</span>
+      <span style="font-size:9px">${m.label}</span>
+    </button>`;
+  }).join('');
+}
+
+function openSheet(i){
+  state.activeSheet=i;
+  const p=pos()[i],l=li(),r=ri();
+  const dir=i===l?'◀ 左隣（あなたの後方）':i===r?'▶ 右隣（あなたの前方）':'';
+  document.getElementById('sheet-title').textContent='Seat '+p;
+  document.getElementById('sheet-sub').textContent=dir;
+  renderSheetPlayers(i);
+  const pro=profileOf(i);
+  // Render axis UI
+  document.getElementById('sheet-tags').innerHTML=`
+    <div style="width:100%">
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">レンジ幅 (VPIP)</div>
+      <div style="display:flex;gap:4px;margin-bottom:12px">${axisBtn(i,'vpip',VPIP_META,pro.vpip)}</div>
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">⚡ アグレッション</div>
+      <div style="display:flex;gap:4px;margin-bottom:12px">${axisBtn(i,'agg',AGG_META,pro.agg)}</div>
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">スキルレベル</div>
+      <div style="display:flex;gap:4px;margin-bottom:14px">${axisBtn(i,'skill',SKILL_META,pro.skill)}</div>
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">特殊傾向（複数可）</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px">${ALL_TENDS.map(t=>{
+        const m=TEND_META[t],active=pro.tends.includes(t);
+        const testPro={...pro,tends:[...pro.tends.filter(x=>x!==t),t]};
+        const disabled=!active&&getConflicts(testPro).has(t);
+        return`<button onclick="${disabled?'':'toggleTend('+i+',\''+t+'\')'}"
+          style="width:100%;padding:10px 12px;border-radius:10px;font-family:inherit;
+          cursor:${disabled?'not-allowed':'pointer'};
+          background:${active?m.bg:'#0d1a0d'};
+          border:1.5px solid ${active?m.color:disabled?'#1a2a1a':'#2a3a2a'};
+          opacity:${disabled?'0.3':'1'};text-align:left;display:flex;align-items:flex-start;gap:10px">
+          <span style="font-size:18px;flex-shrink:0;margin-top:1px">${m.emoji}</span>
+          <span style="display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:12px;font-weight:700;color:${active?m.color:disabled?'#2a3a2a':'#8aaa8a'}">${m.label}</span>
+            <span style="font-size:11px;color:${active?'#d4e8d4':'#6a8a6a'};line-height:1.5">${m.desc}</span>
+          </span>
+        </button>`;
+      }).join('')}</div>
+    </div>`;
+  document.getElementById('sheet-hint').textContent=
+    i===l?'💡 左隣はスティール頻度・3betリスクに影響':
+    i===r?'💡 右隣はオープンレンジの慎重度に影響':'💡 全席のプロフィールが距離に応じて補正に反映されます';
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('sheet').classList.add('open');
+}
+
+function remapProfilesForHeroMove(oldIdx,newIdx){
+  const n=state.tableSize;
+  if(oldIdx===newIdx) return;
+  const shift=newIdx-oldIdx;
+  const remapped={};
+  for(const[k,v]of Object.entries(state.seatProfiles)){
+    const seat=parseInt(k);
+    if(seat===oldIdx) continue;
+    const newSeat=((seat+shift)%n+n)%n;
+    if(newSeat!==newIdx) remapped[newSeat]=v;
+  }
+  state.seatProfiles=remapped;
+}
+
+function setHeroFromRange(i){
+  remapProfilesForHeroMove(state.heroIdx,i);
+  state.heroIdx=i;
+  renderAll();
+}
+
+function renderPosBtns(){
+  const p=pos();
+  document.getElementById('pos-btns').innerHTML=p.map((seat,i)=>{
+    const isHero=i===state.heroIdx;
+    const bg=isHero?'var(--gold)':'transparent';
+    const color=isHero?'#0a1a0a':'var(--text-dim)';
+    const border=isHero?'var(--gold)':'var(--border2)';
+    return`<button onclick="setHeroFromRange(${i})" style="padding:5px 10px;border-radius:4px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0;background:${bg};color:${color};border:1px solid ${border}">${isHero?'★ ':''} ${seat}</button>`;
+  }).join('');
+  // シナリオが現在のポジションで有効か確認、無効なら先頭有効シナリオにリセット
+  const valid=validScenariosFor(heroPos());
+  if(!valid.includes(state.scenario)) state.scenario=valid[0];
+  updateScenarioBtns();
+}
+
+function validScenariosFor(hp){
+  if(hp==='BB') return['BB_DEF'];
+  if(hp==='SB') return['RFI'];
+  if(hp==='UTG'||hp==='UTG+1') return['RFI'];
+  return['RFI','3BET_EP','3BET_LP'];
+}
+
+function setScenario(s){
+  const hp=heroPos();
+  const valid=validScenariosFor(hp);
+  if(!valid.includes(s)) return;
+  state.scenario=s;
+  updateScenarioBtns();
+  renderAll();
+}
+
+function updateScenarioBtns(){
+  const hp=heroPos();
+  const valid=validScenariosFor(hp);
+  const isBB=hp==='BB';
+  const configs={
+    'RFI':    {id:'sc-rfi',  bg:'var(--gold)',color:'#0a1a0a',border:'var(--gold)',    inactiveColor:'#818060',inactiveBorder:'#5a5a20'},
+    '3BET_EP':{id:'sc-3bep',bg:'#818CF8',    color:'#0a1a0a',border:'#818CF8',        inactiveColor:'#818CF8',inactiveBorder:'#3a3060'},
+    '3BET_LP':{id:'sc-3blp',bg:'#F97316',    color:'#0a1a0a',border:'#F97316',        inactiveColor:'#F97316',inactiveBorder:'#5c2a0a'},
+    'BB_DEF': {id:'sc-bbdef',bg:'#60A5FA',   color:'#0a1a0a',border:'#60A5FA',        inactiveColor:'#60A5FA',inactiveBorder:'#1e3a5f'},
+  };
+  ['RFI','3BET_EP','3BET_LP','BB_DEF'].forEach(sc=>{
+    const cfg=configs[sc];
+    const btn=document.getElementById(cfg.id);
+    if(!btn) return;
+    const isValid=valid.includes(sc);
+    const active=sc===state.scenario;
+    // BBのときはBB_DEFのみ表示、他を隠す
+    // BB以外のときはBB_DEFを隠す
+    const show=isBB?(sc==='BB_DEF'):sc!=='BB_DEF';
+    btn.style.display=show?'':'none';
+    if(!isValid||!show){
+      btn.style.background='transparent';btn.style.color='#2a3a2a';
+      btn.style.borderColor='#1a2a1a';btn.style.opacity='0.4';btn.style.cursor='not-allowed';
+    } else {
+      btn.style.display='';
+      btn.style.opacity='1';btn.style.cursor='pointer';
+      btn.style.background=active?cfg.bg:'transparent';
+      btn.style.color=active?cfg.color:cfg.inactiveColor;
+      btn.style.borderColor=active?cfg.border:cfg.inactiveBorder;
+    }
+  });
+  const isBBDef=state.scenario==='BB_DEF';
+  const bbRow=document.getElementById('bb-villain-row');
+  if(bbRow) bbRow.style.display=isBBDef?'block':'none';
+  if(isBBDef) renderBBVillainBtns();
+  const lgRfi=document.getElementById('legend-rfi');
+  const lgBb=document.getElementById('legend-bbdef');
+  if(lgRfi) lgRfi.style.display=isBBDef?'none':'flex';
+  if(lgBb)  lgBb.style.display=isBBDef?'flex':'none';
+}
+function renderBBVillainBtns(){
+  const p=pos().filter(seat=>seat!=='BB'&&seat!=='SB'||true); // show all except BB
+  const positions=['UTG','UTG+1','MP','MP+1','HJ','CO','BTN','SB'];
+  const avail=positions.filter(p=>BASE_BB_DEF[p]);
+  const container=document.getElementById('bb-villain-btns');
+  if(!container) return;
+  container.innerHTML=avail.map(p=>{
+    const active=p===villainOpenPos;
+    return`<button onclick="setVillainOpenPos('${p}')"
+      style="padding:5px 10px;border-radius:5px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;
+      background:${active?'#60A5FA':'transparent'};color:${active?'#0a1a0a':'var(--text-dim)'};
+      border:1px solid ${active?'#60A5FA':'var(--border2)'}">
+      ${p}
+    </button>`;
+  }).join('');
+}
+
+function setVillainOpenPos(pos){
+  villainOpenPos=pos;
+  renderBBVillainBtns();
+  renderMatrix();
+}
+
+// BB守備レンジのスタック×人数補正
+function applyBBDefAdj(c, t, key){
+  const stack=state.stackSize;
+  const n=state.tableSize;
+  const isPremium=(t>=0.85); // プレミアムは補正しない
+
+  // ── スタックサイズ補正 ────────────────────────────────────
+  // ショートになるほどコール減・3-betオールイン増（またはフォールド増）
+  // ディープになるほどコール増（インプライドオッズ）
+  let stackCallMult=1, stackThreeMult=1;
+  if(stack<=20){
+    stackCallMult=0.2;  // ほぼコールなし、プッシュフォールド
+    stackThreeMult=1.8; // 3-betはオールイン
+  } else if(stack<=30){
+    stackCallMult=0.45;
+    stackThreeMult=1.5;
+  } else if(stack<=50){
+    stackCallMult=0.72;
+    stackThreeMult=1.2;
+  } else if(stack<=75){
+    stackCallMult=0.88;
+    stackThreeMult=1.08;
+  } else if(stack===200){
+    // 投機的ハンドのコールEV向上
+    const isSpec=isSpeculativeHand(key);
+    stackCallMult=isSpec?1.25:1.08;
+    stackThreeMult=1.0;
+  }
+
+  // ── テーブル人数補正 ──────────────────────────────────────
+  // 人数が多いほどUTGのレンジが狭い → BBはタイトに守備
+  // vs UTG の場合のみ人数が影響（BTN/SBはポジション固定）
+  let sizeCallMult=1, sizeThreeMult=1;
+  if(villainOpenPos==='UTG'||villainOpenPos==='UTG+1'){
+    if(n>=8){ sizeCallMult=0.85; sizeThreeMult=1.15; }
+    else if(n===7){ sizeCallMult=0.92; sizeThreeMult=1.08; }
+    // 6max UTGはほぼMP相当なので補正小
+  } else if(villainOpenPos==='MP'||villainOpenPos==='MP+1'){
+    if(n>=9){ sizeCallMult=0.90; sizeThreeMult=1.10; }
+  }
+
+  // ── レーキ補正 ────────────────────────────────────────────
+  // レーキ10%: コールEV低下（ポストフロップでの損失増）→コール縮小・フォールド増
+  // 3-betでプリフロップ終了ならレーキ回避できる
+  let rakeCallMult=1, rakeThreeMult=1;
+  if(state.rake===10&&!isPremium){
+    rakeCallMult=0.82;   // コール約18%縮小
+    rakeThreeMult=1.12;  // 3-bet約12%拡大
+  }
+
+  if(isPremium) return{c:Math.min(1,c),t:Math.min(1,t)};
+
+  let newC=Math.min(1,c*stackCallMult*sizeCallMult*rakeCallMult);
+  let newT=Math.min(1,t*stackThreeMult*sizeThreeMult*rakeThreeMult);
+  // コール+3-betの合計が1を超えないよう正規化
+  if(newC+newT>1){ const total=newC+newT; newC=newC/total*(1-(1-newC-newT>0?1-newC-newT:0)); newT=newT/total*(1-(1-newC-newT>0?0:0)); }
+  newC=Math.max(0,Math.min(1,newC));
+  newT=Math.max(0,Math.min(1,newT));
+  if(newC+newT>1){newC=1-newT;}
+  return{c:newC,t:newT};
+}
+
+function renderBBDefMatrix(){
+  const baseData=BASE_BB_DEF[villainOpenPos]||{};
+  const panel=document.getElementById('panel-range');
+  const containerW=panel.clientWidth||window.innerWidth;
+  const rowHeaderW=20,gap=2;
+  const cw=Math.floor((containerW-24-rowHeaderW-gap*13)/13);
+  const ch=Math.max(22,Math.floor(cw*0.85));
+  const fsHand=Math.max(5.5,cw*0.30);
+
+  // Apply adjustments to get final defData
+  const defData={};
+  for(const[k,v]of Object.entries(baseData)){
+    defData[k]=applyBBDefAdj(v.c||0,v.t||0,k);
+  }
+
+  function defCellBars(c,t){
+    // c=call, t=3bet, fold=1-c-t
+    const fold=Math.max(0,1-c-t);
+    if(t>=0.95) return`<div style="position:absolute;inset:0;background:#7c3aed"></div>`;
+    if(t>0&&c>0){
+      const tp=Math.round(t*100),cp=Math.round(c*100);
+      return`<div style="position:absolute;top:0;left:0;bottom:0;width:${tp}%;background:#7c3aed"></div>`+
+             `<div style="position:absolute;top:0;bottom:0;left:${tp}%;width:${cp}%;background:#16a34a"></div>`;
+    }
+    if(t>0){
+      const tp=Math.round(t*100),fp=100-tp;
+      return`<div style="position:absolute;top:0;left:0;bottom:0;width:${tp}%;background:#7c3aed"></div>`+
+             `<div style="position:absolute;top:0;right:0;bottom:0;width:${fp}%;background:#111f11"></div>`;
+    }
+    if(c>=0.95) return`<div style="position:absolute;inset:0;background:#16a34a"></div>`;
+    if(c>0){
+      const cp=Math.round(c*100),fp=100-cp;
+      return`<div style="position:absolute;top:0;left:0;bottom:0;width:${cp}%;background:#16a34a"></div>`+
+             `<div style="position:absolute;top:0;right:0;bottom:0;width:${fp}%;background:#111f11"></div>`;
+    }
+    return`<div style="position:absolute;inset:0;background:#111f11"></div>`;
+  }
+
+  let html=`<div style="display:flex;margin-left:${rowHeaderW}px;margin-bottom:2px">`;
+  RANKS.forEach(r=>{html+=`<div style="width:${cw}px;margin:0 ${gap/2}px;text-align:center;font-size:${Math.max(6,cw*0.28)}px;color:var(--text-dim);flex-shrink:0">${r}</div>`;});
+  html+='</div>';
+
+  RANKS.forEach((r1,ri)=>{
+    html+=`<div style="display:flex;margin-bottom:${gap}px;align-items:center">`;
+    html+=`<div style="width:${rowHeaderW}px;font-size:${Math.max(6,cw*0.28)}px;color:var(--text-dim);text-align:right;padding-right:3px;flex-shrink:0">${r1}</div>`;
+    RANKS.forEach((r2,ci)=>{
+      const key=ri===ci?r1+r2:ri<ci?r1+r2+'s':r2+r1+'o';
+      const d=defData[key]||{c:0,t:0};
+      const c=d.c||0,t=d.t||0;
+      const isSuited=ri<ci,isPair=ri===ci;
+      const suitColor=isPair?'#c9a227':isSuited?'#60A5FA':'#94A3B8';
+      const label=isPair?r1:isSuited?r1+r2:r2+r1;
+      const textColor=(c+t)>0.1?'rgba(255,255,255,0.92)':'#3a4a3a';
+      html+=`<div style="width:${cw}px;height:${ch}px;border:1px solid #2a3a2a;border-radius:2px;margin:0 ${gap/2}px;flex-shrink:0;position:relative;overflow:hidden;cursor:pointer"
+        onclick="showBBDefDetail('${key}',${c},${t})">
+        ${defCellBars(c,t)}
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+          <div style="font-size:${fsHand}px;font-weight:800;color:${textColor};text-shadow:0 1px 3px rgba(0,0,0,0.9)">${label}</div>
+        </div>
+        <div style="position:absolute;bottom:1px;right:2px;font-size:${Math.max(5,cw*0.22)}px;color:${suitColor};opacity:0.75;text-shadow:0 1px 2px rgba(0,0,0,0.9)">${isPair?'p':isSuited?'s':'o'}</div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  document.getElementById('matrix').innerHTML=html;
+
+  // Update range % in header
+  const total=Object.values(defData).reduce((s,d)=>{
+    const combos=Object.keys(BASE_BB_DEF[villainOpenPos]||{}).includes;
+    return s+(d.c||0)+(d.t||0);
+  },0);
+  const defCount=Object.values(defData).filter(d=>(d.c||0)+(d.t||0)>0.05).length;
+  document.getElementById('range-title').textContent=`BB vs ${villainOpenPos} — ${state.stackSize}BB / ${state.tableSize}max / RAKE${state.rake}%`;
+  document.getElementById('range-pct-top').textContent=`${(defCount/169*100).toFixed(1)}%`;
+}
+
+function showBBDefDetail(key,c,t){
+  const fold=Math.max(0,1-c-t);
+  const actLabel=t>=0.95?'3-BET':t>0&&c>0?`3-BET ${Math.round(t*100)}% / コール ${Math.round(c*100)}%`:c>=0.95?'コール':c>0?`コール ${Math.round(c*100)}%`:'フォールド';
+  const actColor=t>0.5?'#a78bfa':c>0.5?'#4ade80':'#f87171';
+  document.getElementById('hm-hand').textContent=key;
+  document.getElementById('hm-type').textContent=`vs ${villainOpenPos} open`;
+  const tP=Math.round(t*100),cP=Math.round(c*100),fP=Math.round(fold*100);
+  let barInner='';
+  if(t>0&&c>0){barInner=`<div style="position:absolute;top:0;left:0;bottom:0;width:${tP}%;background:#7c3aed;border-radius:6px 0 0 6px"></div><div style="position:absolute;top:0;bottom:0;left:${tP}%;width:${cP}%;background:#16a34a"></div><div style="position:absolute;top:0;right:0;bottom:0;width:${fP}%;background:#1a1a0a;border-radius:0 6px 6px 0"></div>`;}
+  else if(t>0){barInner=`<div style="position:absolute;top:0;left:0;bottom:0;width:${tP}%;background:#7c3aed;border-radius:6px 0 0 6px"></div><div style="position:absolute;top:0;right:0;bottom:0;width:${fP}%;background:#1a1a0a;border-radius:0 6px 6px 0"></div>`;}
+  else if(c>0){barInner=`<div style="position:absolute;top:0;left:0;bottom:0;width:${cP}%;background:#16a34a;border-radius:6px 0 0 6px"></div><div style="position:absolute;top:0;right:0;bottom:0;width:${fP}%;background:#1a1a0a;border-radius:0 6px 6px 0"></div>`;}
+  else{barInner=`<div style="position:absolute;inset:0;background:#1a1a0a;border-radius:6px"></div>`;}
+  document.getElementById('hm-bar').style.position='relative';
+  document.getElementById('hm-bar').innerHTML=barInner;
+  document.getElementById('hm-bar-labels').innerHTML=
+    `<span style="color:#a78bfa">3-BET ${tP}%</span><span style="color:#4ade80">コール ${cP}%</span><span style="color:#6b8f6b">フォールド ${fP}%</span>`;
+  document.getElementById('hm-stats').innerHTML=`
+    <div style="background:var(--surface3);border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">アクション</div><div style="font-size:12px;font-weight:700;color:${actColor}">${actLabel}</div></div>
+    <div style="background:var(--surface3);border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">3-BET</div><div style="font-size:22px;font-weight:800;color:#a78bfa">${tP}%</div></div>
+    <div style="background:var(--surface3);border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">コール</div><div style="font-size:22px;font-weight:800;color:#4ade80">${cP}%</div></div>
+    <div style="background:var(--surface3);border-radius:8px;padding:10px;text-align:center"><div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">フォールド</div><div style="font-size:22px;font-weight:800;color:#6b8f6b">${fP}%</div></div>`;
+  document.getElementById('hm-adj').style.display='none';
+  const ov=document.getElementById('hand-modal-overlay'),mo=document.getElementById('hand-modal');
+  ov.style.opacity='1';ov.style.pointerEvents='all';mo.style.transform='scale(1)';
+}
+
+function updateScenarioBtns(){
+  const hp=heroPos();
+  const noThreeBet=['UTG','UTG+1'];
+  const disabled=noThreeBet.includes(hp);
+  const configs={
+    'RFI':    {id:'sc-rfi',  bg:'var(--gold)',color:'#0a1a0a',border:'var(--gold)',    inactiveColor:'#818060',inactiveBorder:'#5a5a20'},
+    '3BET_EP':{id:'sc-3bep',bg:'#818CF8',   color:'#0a1a0a',border:'#818CF8',        inactiveColor:'#818CF8',inactiveBorder:'#3a3060'},
+    '3BET_LP':{id:'sc-3blp',bg:'#F97316',   color:'#0a1a0a',border:'#F97316',        inactiveColor:'#F97316',inactiveBorder:'#5c2a0a'},
+    'BB_DEF': {id:'sc-bbdef',bg:'#60A5FA',  color:'#0a1a0a',border:'#60A5FA',        inactiveColor:'#60A5FA',inactiveBorder:'#1e3a5f'},
+  };
+  ['RFI','3BET_EP','3BET_LP','BB_DEF'].forEach(sc=>{
+    const cfg=configs[sc];const btn=document.getElementById(cfg.id);if(!btn)return;
+    const is3bet=sc==='3BET_EP'||sc==='3BET_LP';
+    const active=sc===state.scenario;
+    if(disabled&&is3bet){
+      btn.style.background='transparent';btn.style.color='#2a3a2a';
+      btn.style.borderColor='#1a2a1a';btn.style.opacity='0.4';btn.style.cursor='not-allowed';
+      btn.title='このポジションでは非現実的';
+    } else {
+      btn.style.opacity='1';btn.style.cursor='pointer';btn.title='';
+      btn.style.background=active?cfg.bg:'transparent';
+      btn.style.color=active?cfg.color:cfg.inactiveColor;
+      btn.style.borderColor=active?cfg.border:cfg.inactiveBorder;
+    }
+  });
+  const isBBDef=state.scenario==='BB_DEF';
+  const bbRow=document.getElementById('bb-villain-row');
+  if(bbRow) bbRow.style.display=isBBDef?'block':'none';
+  if(isBBDef) renderBBVillainBtns();
+  const lgRfi=document.getElementById('legend-rfi');
+  const lgBb=document.getElementById('legend-bbdef');
+  if(lgRfi) lgRfi.style.display=isBBDef?'none':'flex';
+  if(lgBb)  lgBb.style.display=isBBDef?'flex':'none';
+}
+
+function showHandDetail(key,freq,baseFreq){
+  const raise=freq;
+  const fold=Math.max(0,1-raise);
+  const delta=freq-baseFreq;
+
+  // Hand type
+  const suited=key.endsWith('s'),offsuit=key.endsWith('o'),pair=!suited&&!offsuit;
+  const typeLabel=pair?'ポケットペア':suited?'スーテッド':'オフスート';
+  const combos=pair?6:suited?4:12;
+
+  // Action label
+  let actionLabel,actionColor;
+  if(raise>=0.95){actionLabel='レイズ 100%';actionColor='#16a34a';}
+  else if(raise>=0.50){actionLabel=`ミックス (${Math.round(raise*100)}% レイズ)`;actionColor='#ca8a04';}
+  else if(raise>=0.10){actionLabel=`ブラフ域 (${Math.round(raise*100)}% レイズ)`;actionColor='#b45309';}
+  else{actionLabel='フォールド';actionColor='#4a4a4a';}
+
+  document.getElementById('hm-hand').textContent=key;
+  document.getElementById('hm-type').textContent=typeLabel+' · '+combos+'コンボ';
+
+  // Visual bar using div split
+  const rPct=Math.round(raise*100);
+  const fPct=100-rPct;
+  let barInner='';
+  if(raise>=0.95) barInner=`<div style="position:absolute;inset:0;background:#16a34a;border-radius:6px"></div>`;
+  else if(raise>=0.50) barInner=
+    `<div style="position:absolute;top:0;left:0;bottom:0;width:${rPct}%;background:#16a34a;border-radius:6px 0 0 6px"></div>`+
+    `<div style="position:absolute;top:0;right:0;bottom:0;width:${fPct}%;background:#ca8a04;border-radius:0 6px 6px 0"></div>`;
+  else if(raise>=0.10) barInner=
+    `<div style="position:absolute;top:0;left:0;bottom:0;width:${rPct}%;background:#b45309;border-radius:6px 0 0 6px"></div>`+
+    `<div style="position:absolute;top:0;right:0;bottom:0;width:${fPct}%;background:#1a1a0a;border-radius:0 6px 6px 0"></div>`;
+  else barInner=`<div style="position:absolute;inset:0;background:#1a1a0a;border-radius:6px"></div>`;
+  document.getElementById('hm-bar').style.position='relative';
+  document.getElementById('hm-bar').innerHTML=barInner;
+
+  const barLabels=raise>=0.10&&raise<0.95
+    ?`<span>${raise>=0.50?'レイズ':'ブラフ'} ${rPct}%</span><span>フォールド ${fPct}%</span>`
+    :`<span>${raise>=0.95?'レイズ 100%':'フォールド 100%'}</span>`;
+  document.getElementById('hm-bar-labels').innerHTML=barLabels;
+
+  // Stats grid
+  const adjSign=delta>0?'+':'';
+  const scenLabel=scenarioLabel();
+  document.getElementById('hm-stats').innerHTML=`
+    <div style="background:var(--surface3);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">シナリオ</div>
+      <div style="font-size:13px;font-weight:700;color:var(--gold)">${scenLabel}</div>
+    </div>
+    <div style="background:var(--surface3);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">アクション</div>
+      <div style="font-size:11px;font-weight:700;color:${actionColor}">${actionLabel}</div>
+    </div>
+    <div style="background:var(--surface3);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">ベース頻度</div>
+      <div style="font-size:18px;font-weight:700;color:var(--text)">${Math.round(baseFreq*100)}%</div>
+    </div>
+    <div style="background:var(--surface3);border-radius:8px;padding:10px;text-align:center">
+      <div style="font-size:9px;color:var(--text-dim);margin-bottom:4px">補正後</div>
+      <div style="font-size:18px;font-weight:700;color:${delta>0.01?'#4ade80':delta<-0.01?'#f87171':'var(--text)'}">${Math.round(freq*100)}% ${Math.abs(delta)>0.01?'('+adjSign+Math.round(delta*100)+'%)':''}</div>
+    </div>`;
+
+  // Adjustment detail
+  const{adj}=computeAdj();
+  const adjEl=document.getElementById('hm-adj');
+  if(adj.length>0&&Math.abs(delta)>0.01){
+    adjEl.style.display='block';
+    adjEl.innerHTML='<div style="color:var(--green-accent);font-size:9px;letter-spacing:1px;margin-bottom:4px">⚡ 補正要因</div>'+
+      adj.map(a=>{
+        const pct=((a.mult-1)*100).toFixed(0);
+        return`<div style="color:${a.color}">${a.reason} <span style="color:${a.mult>1?'#4ade80':'#f87171'}">(${a.mult>1?'+':''}${pct}%)</span></div>`;
+      }).join('');
+  } else {adjEl.style.display='none';}
+
+  // Show modal
+  const ov=document.getElementById('hand-modal-overlay');
+  const mo=document.getElementById('hand-modal');
+  ov.style.opacity='1';ov.style.pointerEvents='all';
+  mo.style.transform='scale(1)';
+}
+
+function closeHandModal(){
+  const ov=document.getElementById('hand-modal-overlay');
+  const mo=document.getElementById('hand-modal');
+  ov.style.opacity='0';ov.style.pointerEvents='none';
+  mo.style.transform='scale(0.85)';
+}
+
+function renderLogPosBtns(){
+  const el=document.getElementById('log-pos-btns');
+  if(!el) return;
+  const p=pos();
+  el.innerHTML=p.map((seat,i)=>{
+    const isHero=i===state.heroIdx;
+    const pname=state.seatProfiles[i]?.name||'';
+    const bg=isHero?'var(--gold)':'transparent';
+    const color=isHero?'#0a1a0a':'var(--text-dim)';
+    const border=isHero?'var(--gold)':'var(--border2)';
+    const label=isHero?('★ '+seat):pname?seat+'\n'+pname:seat;
+    return`<button onclick="setHeroFromLog(${i})" style="padding:5px 8px;border-radius:4px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0;background:${bg};color:${color};border:1px solid ${border};display:flex;flex-direction:column;align-items:center;line-height:1.3">
+      <span>${isHero?'★ ':''} ${seat}</span>
+      ${pname?`<span style="font-size:9px;color:${isHero?'#0a1a0a':'#c9a227'};font-weight:600">${pname.length>6?pname.slice(0,5)+'…':pname}</span>`:''}
+    </button>`;
+  }).join('');
+  const hpEl=document.getElementById('log-hero-pos');
+  if(hpEl) hpEl.textContent=heroPos();
+}
+
+function setHeroFromLog(i){
+  remapProfilesForHeroMove(state.heroIdx,i);
+  state.heroIdx=i;
+  renderAll();
+  renderVillainStacks();
+}
+
+function setRake(r){
+  state.rake=r;
+  const b5=document.getElementById('rake-5');
+  b5.style.background=r===5?'var(--gold)':'transparent';
+  b5.style.color=r===5?'#0a1a0a':'var(--text-dim)';
+  b5.style.borderColor=r===5?'var(--gold)':'var(--border2)';
+  const b10=document.getElementById('rake-10');
+  b10.style.background=r===10?'#f87171':'transparent';
+  b10.style.color=r===10?'#0a1a0a':'#f87171';
+  b10.style.borderColor=r===10?'#f87171':'#7a3a3a';
+  renderAll();
+}
+
+function setTableSize(n){
+  const currentPos=heroPos();
+  state.tableSize=n;
+  state.seatProfiles={};
+  closeSheet();
+  // 同じポジション名があれば保持、なければ0(BTN)
+  const newIdx=POSITIONS_MAP[n].indexOf(currentPos);
+  state.heroIdx=newIdx>=0?newIdx:0;
+  document.querySelectorAll('.size-btn').forEach((b,i)=>{b.classList.toggle('active',[6,7,8,9][i]===n)});
+  renderAll();
+}
+
+function closeSheet(){
+  state.activeSheet=null;
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('sheet').classList.remove('open');
+}
+
+function setHero(i){remapProfilesForHeroMove(state.heroIdx,i);state.heroIdx=i;haptic('medium');closeSheet();renderAll()}
+
+// ── Exploit Advisor ──────────────────────────────────────────
+function countProfiledSeats(){
+  return Object.keys(state.seatProfiles).filter(i=>hasProfile(parseInt(i))).length;
+}
+
+function buildExploitAdvice(){
+  const p=pos();
+  const hi=state.heroIdx;
+  const hp=heroPos();
+  const advices=[];
+
+  p.forEach((seat,i)=>{
+    if(i===hi) return;
+    if(!hasProfile(i)) return;
+    const pro=profileOf(i);
+    const dist=getRelativeDist(hi,i);
+    const side=dist.side; // 'left'(後方) or 'right'(前方)
+    const distNum=dist.dist;
+    const pos_label=distNum===1?(side==='left'?'直後方':'直前方'):`${side==='left'?'後方':'前方'}${distNum}席`;
+
+    const vpip=pro.vpip; // 0=タイト,1=普通,2=ルース
+    const agg=pro.agg;   // 0=パッシブ,1=普通,2=アグレ
+    const skill=pro.skill;// 0=フィッシュ,1=普通,2=GTO
+    const tends=pro.tends;
+
+    const tips=[];
+
+    // VPIP×サイド別
+    if(vpip===0&&side==='left') tips.push({priority:3,icon:'♠',text:`スティール頻度を上げ、3-betは少な目に。`});
+    if(vpip===2&&side==='left') tips.push({priority:2,icon:'♦',text:`スティール成功率が低い。バリューレンジを絞る。`});
+    if(vpip===0&&side==='right') tips.push({priority:3,icon:'♠',text:`3-betを減らし、コールでポットコントロール。`});
+    if(vpip===2&&side==='right') tips.push({priority:2,icon:'♦',text:`バリュー3-betを増やす。ブラフは削減。`});
+
+    if(agg===0){
+      tips.push({priority:2,icon:'♣',text:`パッシブ。Cベットを高頻度で。フォールドを誘いやすい。`});
+    }
+    if(agg===2 && side==='left'){
+      tips.push({priority:3,icon:'♥',text:`アグレッシブ(後方)。3-betには慎重に。4-betバリューを広げる検討を。`});
+    }
+    if(agg===2 && side==='right'){
+      tips.push({priority:3,icon:'♥',text:`アグレッシブ(前方)。スクイーズに注意。プレミアムでトラップも有効。`});
+    }
+    if(skill===0){
+      tips.push({priority:3,icon:'★',text:`フィッシュ。バリューベットを大きく。ブラフは減らす。`});
+    }
+    if(skill===2){
+      tips.push({priority:1,icon:'△',text:`GTO意識が高い。搾取しにくい。GTO寄りにプレイ。`});
+    }
+    if(tends.includes('station')){
+      tips.push({priority:3,icon:'★',text:`ステーション。ポットを大きく、ブラフ削除。薄いバリューも積極的にベット。`});
+    }
+    if(tends.includes('folder')){
+      tips.push({priority:3,icon:'★',text:`フォールダー。Cベットを高頻度・大きめで。ポストフロップのブラフが通りやすい。`});
+    }
+    if(tends.includes('maniac')){
+      tips.push({priority:3,icon:'♥',text:`マニアック。プレミアムでコールトラップ。4-betバリューを拡大。`});
+    }
+    if(tends.includes('nitroll')){
+      tips.push({priority:3,icon:'♠',text:`ニットロール。3-betにはほぼ折れる。スティール最大化。`});
+    }
+
+    if(tips.length>0){
+      advices.push({seat,tips:tips.sort((a,b)=>b.priority-a.priority)});
+    }
+  });
+
+  return advices;
+}
+
+function getRelativeDist(heroIdx,targetIdx){
+  const n=state.tableSize;
+  const leftDist=((targetIdx-heroIdx)+n)%n;
+  const rightDist=((heroIdx-targetIdx)+n)%n;
+  if(leftDist<=rightDist) return{side:'left',dist:leftDist};
+  return{side:'right',dist:rightDist};
+}
+
+function updateExploitButton(){
+  const count=countProfiledSeats();
+  const btn=document.getElementById('exploit-btn-g');
+  const none=document.getElementById('exploit-btn-none');
+  const show=count>=2; // 2人以上プロフィール入力でボタン表示
+  if(btn) btn.style.display=show?'block':'none';
+  if(none) none.style.display=show?'none':'block';
+}
+
+function buildTableSummary(){
+  const p=pos();
+  const hi=state.heroIdx;
+  const hp=heroPos();
+
+  // 全プロフィール収集（相対位置情報付き）
+  const players=p.map((seat,i)=>{
+    if(i===hi) return null;
+    if(!hasProfile(i)) return null;
+    const pro=profileOf(i);
+    const dist=getRelativeDist(hi,i);
+    return{seat,i,pro,side:dist.side,dist:dist.dist};
+  }).filter(Boolean);
+
+  if(players.length===0) return null;
+
+  // ── 分析 ──────────────────────────────────────────────────
+  const allVpip=players.map(p=>p.pro.vpip);
+  const allAgg=players.map(p=>p.pro.agg);
+  const avgVpip=allVpip.reduce((a,b)=>a+b,0)/allVpip.length;
+  const avgAgg=allAgg.reduce((a,b)=>a+b,0)/allAgg.length;
+
+  // 後方プレイヤー（スティール成功に影響）
+  const leftPlayers=players.filter(p=>p.side==='left').sort((a,b)=>a.dist-b.dist);
+  // 前方プレイヤー（オープンレンジに影響）
+  const rightPlayers=players.filter(p=>p.side==='right').sort((a,b)=>a.dist-b.dist);
+
+  // 搾取ターゲット（フィッシュ/ステーション/フォールダー）
+  const targets=players.filter(p=>p.pro.skill===0||p.pro.tends.includes('station')||p.pro.tends.includes('folder'));
+  // 要注意（シャーク/マニアック/ニットロール）
+  const dangers=players.filter(p=>p.pro.skill===2||p.pro.tends.includes('maniac')||p.pro.tends.includes('nitroll'));
+  // コーラー多（ブラフ不可）
+  const callers=players.filter(p=>p.pro.tends.includes('station')||p.pro.vpip===2&&p.pro.agg===0);
+  // フォールダー（ブラフ有効）
+  const folders=players.filter(p=>p.pro.tends.includes('folder')||p.pro.vpip===0&&p.pro.agg===0);
+
+  // ── オープンレンジ方針 ────────────────────────────────────
+  const leftTight=leftPlayers.filter(p=>p.pro.vpip===0||p.pro.tends.includes('nitroll'));
+  const leftLoose=leftPlayers.filter(p=>p.pro.vpip===2||p.pro.tends.includes('station'));
+  let openRange='';
+  if(leftTight.length>=2) openRange=`後方に${leftTight.map(p=>p.seat).join('・')}とタイト勢が揃う。スティール成功率が高く、オープンレンジを最大限広げるチャンス。`;
+  else if(leftTight.length===1) openRange=`後方の${leftTight[0].seat}がタイト。スティール頻度をやや上げる。`;
+  else if(leftLoose.length>=1) openRange=`後方に${leftLoose.map(p=>p.seat).join('・')}とコーラーがいる。スティールは絞り、参加はバリュー重視で。`;
+  else openRange=`後方の情報が少ない。標準的なオープンレンジを維持。`;
+
+  // ── 3-bet方針 ─────────────────────────────────────────────
+  const rightTight=rightPlayers.filter(p=>p.pro.vpip===0||p.pro.tends.includes('nitroll'));
+  const rightLoose=rightPlayers.filter(p=>p.pro.vpip===2||p.pro.tends.includes('maniac'));
+  let threeBetStr='';
+  if(rightTight.length>=1) threeBetStr=`前方の${rightTight.map(p=>p.seat).join('・')}はタイト。3-betへのコールが少なく、ブラフ3-betが通りやすい。`;
+  if(rightLoose.length>=1) threeBetStr+=(threeBetStr?'一方、':'')+`前方の${rightLoose.map(p=>p.seat).join('・')}はルース。3-betはバリューのみ。`;
+  if(!threeBetStr) threeBetStr=`前方の情報が少ない。3-betは標準頻度で。`;
+
+  // ── ブラフ方針 ────────────────────────────────────────────
+  let bluffStr='';
+  if(callers.length>0&&folders.length>0){
+    bluffStr=`${folders.map(p=>p.seat).join('・')}にはブラフ有効。${callers.map(p=>p.seat).join('・')}にはブラフ厳禁。相手を見て使い分ける。`;
+  } else if(callers.length>0){
+    bluffStr=`${callers.map(p=>p.seat).join('・')}がコーラー。テーブル全体でブラフを減らし、バリューに徹する。`;
+  } else if(folders.length>0){
+    bluffStr=`${folders.map(p=>p.seat).join('・')}は降りやすい。Cベットを高頻度・大きめにしてブラフを積極化。`;
+  } else {
+    bluffStr=`ブラフ方針は標準。ボードテクスチャに応じて判断。`;
+  }
+
+  // ── 搾取ターゲット ────────────────────────────────────────
+  let targetStr='';
+  if(targets.length>0){
+    const tDesc=targets.map(p=>{
+      const tags=[];
+      if(p.pro.skill===0) tags.push('フィッシュ');
+      if(p.pro.tends.includes('station')) tags.push('ステーション');
+      if(p.pro.tends.includes('folder')) tags.push('フォールダー');
+      return`${p.seat}(${tags.join('/')})`;
+    });
+    targetStr=`${tDesc.join('・')}が主な搾取ターゲット。バリューベットを大きく、ポットを積み上げる。`;
+  }
+
+  // ── 要注意プレイヤー ─────────────────────────────────────
+  let dangerStr='';
+  if(dangers.length>0){
+    const dDesc=dangers.map(p=>{
+      const tags=[];
+      if(p.pro.skill===2) tags.push('シャーク');
+      if(p.pro.tends.includes('maniac')) tags.push('マニアック');
+      if(p.pro.tends.includes('nitroll')) tags.push('ニットロール');
+      return`${p.seat}(${tags.join('/')})`;
+    });
+    dangerStr=`${dDesc.join('・')}には注意。無駄なコンフロンテーションを避け、プレミアムで対峙する。`;
+  }
+
+  // ── このセッションで意識すること ────────────────────────
+  const consciousness=[];
+  if(avgVpip<0.7) consciousness.push('テーブルが全体的にタイト。積極的なスティールでブラインドを稼ぐ。');
+  else if(avgVpip>1.4) consciousness.push('テーブルが全体的にルース。ハンド選択を絞り、バリューで勝負。');
+  if(avgAgg<0.7) consciousness.push('パッシブなテーブル。ベットサイズを大きく取り、Cベット頻度を上げる。');
+  else if(avgAgg>1.4) consciousness.push('アグレッシブなテーブル。ブラフキャッチを増やし、トラップを活用。');
+  if(targets.length>=2) consciousness.push('搾取対象が複数いる好環境。バリューハンドでのポット肥大化を最優先。');
+  if(dangers.length>=2) consciousness.push('手強い相手が多い。GTO寄りのプレイを心がけ、搾取よりエラー回避を優先。');
+
+  return{openRange,threeBetStr,bluffStr,targetStr,dangerStr,consciousness,players,hp};
+}
+
+function showExploitAdvice(){
+  haptic('heavy');
+  const hp=heroPos();
+  const summary=buildTableSummary();
+
+  let html='';
+
+  if(!summary){
+    html=`<div style="color:#5a7a5a;font-size:12px;text-align:center;padding:30px">
+      席をタップしてプレイヤーのプロフィールを設定してください
+    </div>`;
+  } else {
+    const {openRange,threeBetStr,bluffStr,targetStr,dangerStr,consciousness}=summary;
+
+    // ヘッダー
+    html+=`<div style="font-size:10px;color:#5a7a5a;margin-bottom:16px">Hero: ${hp} | ${countProfiledSeats()}人解析済み</div>`;
+
+    const section=(title,color,text)=>text?`
+      <div style="margin-bottom:14px">
+        <div style="font-size:9px;color:${color};letter-spacing:1.5px;font-weight:700;margin-bottom:6px">${title}</div>
+        <div style="font-size:12px;color:#d4e8d4;line-height:1.8;background:#0d1f0d;border-radius:8px;padding:10px 12px;border-left:3px solid ${color}">${text}</div>
+      </div>`:''
+
+    html+=section('OPEN RANGE','#c9a227',openRange);
+    html+=section('3-BET','#818CF8',threeBetStr);
+    html+=section('BLUFF','#F97316',bluffStr);
+    if(targetStr) html+=section('EXPLOIT TARGET','#4ade80',targetStr);
+    if(dangerStr) html+=section('CAUTION','#f87171',dangerStr);
+
+    // 意識すること
+    if(consciousness.length>0){
+      html+=`<div style="background:#071f07;border:1px solid #1a4a1a;border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="font-size:9px;color:#4ade80;letter-spacing:1.5px;font-weight:700;margin-bottom:8px">THIS SESSION</div>
+        ${consciousness.map(c=>`<div style="font-size:12px;color:#d4e8d4;line-height:1.7;margin-bottom:4px;padding-left:8px;border-left:2px solid #4ade80">${c}</div>`).join('')}
+      </div>`;
+    }
+  }
+
+  document.getElementById('exploit-content').innerHTML=html;
+  const ov=document.getElementById('exploit-overlay');
+  const mo=document.getElementById('exploit-modal');
+  ov.style.opacity='1';ov.style.pointerEvents='all';
+  mo.style.transform='translateY(0)';
+}
+
+function closeExploitModal(){
+  const ov=document.getElementById('exploit-overlay');
+  const mo=document.getElementById('exploit-modal');
+  ov.style.opacity='0';ov.style.pointerEvents='none';
+  mo.style.transform='translateY(100%)';
+}
+
+function switchTab(tab){
+  state.currentTab=tab;
+  // Normal panels inside content div
+  ['table','range','book','log'].forEach(t=>{
+    const p=document.getElementById('panel-'+t);
+    const b=document.getElementById('tab-'+t);
+    if(p) p.classList.toggle('active',t===tab);
+    if(b) b.classList.toggle('active',t===tab);
+  });
+  // panel-eq is outside content div → use fixed overlay
+  const eqPanel=document.getElementById('panel-eq');
+  const eqTab=document.getElementById('tab-eq');
+  const isEq=tab==='eq';
+  if(eqPanel) eqPanel.style.display=isEq?'block':'none';
+  if(eqTab)   eqTab.classList.toggle('active',isEq);
+  if(isEq&&eqPanel){
+    const hh=(document.querySelector('.header')?.offsetHeight||52)
+            +(document.querySelector('.tabbar')?.offsetHeight||36);
+    eqPanel.style.top=hh+'px';
+  }
+  if(tab==='range'){renderPosBtns();renderMatrix();}
+  if(tab==='book'){renderBookTagBtns();renderBookList();}
+  if(tab==='log'){renderVillainStacks();renderLogPosBtns();}
+  if(tab==='eq'){refreshEqDisplays();}
+}
+
+// ── Player Book Tab ──────────────────────────────────────────
+let bookProfile={vpip:1,agg:1,skill:1,tends:[]};
+
+function bookAxisBtn(axis,meta,cur){
+  return meta.map((m,v)=>{
+    const active=cur===v;
+    const testPro={...bookProfile,[axis]:v};
+    const conflicts=getConflicts(testPro);
+    const disabled=!active&&bookProfile.tends.some(t=>conflicts.has(t));
+    const bg=active?m.color+'33':'transparent';
+    const border=active?m.color:disabled?'#1a2a1a':'var(--border2)';
+    const color=active?m.color:disabled?'#2a3a2a':'var(--text-dim)';
+    return`<button onclick="${disabled?'':('setBookAxis(\''+axis+'\','+v+')')}"
+      style="flex:1;padding:5px 2px;border-radius:5px;font-size:9px;font-weight:700;font-family:inherit;
+      cursor:${disabled?'not-allowed':'pointer'};background:${bg};color:${color};
+      border:1px solid ${border};opacity:${disabled?'0.35':'1'}"
+      ${disabled?'title="現在の特殊傾向と矛盾します"':''}>
+      ${m.emoji}<br>${m.label}</button>`;
+  }).join('');
+}
+
+function renderBookTagBtns(){
+  document.getElementById('book-tag-btns').innerHTML=`
+    <div style="width:100%">
+      <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">レンジ幅</div>
+      <div style="display:flex;gap:3px;margin-bottom:10px">${bookAxisBtn('vpip',VPIP_META,bookProfile.vpip)}</div>
+      <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">アグレッション</div>
+      <div style="display:flex;gap:3px;margin-bottom:10px">${bookAxisBtn('agg',AGG_META,bookProfile.agg)}</div>
+      <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">スキル</div>
+      <div style="display:flex;gap:3px;margin-bottom:10px">${bookAxisBtn('skill',SKILL_META,bookProfile.skill)}</div>
+      <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">特殊傾向</div>
+      <div style="display:flex;flex-direction:column;gap:6px">${ALL_TENDS.map(t=>{
+        const m=TEND_META[t],active=bookProfile.tends.includes(t);
+        const testPro={...bookProfile,tends:[...bookProfile.tends.filter(x=>x!==t),t]};
+        const disabled=!active&&getConflicts(testPro).has(t);
+        return`<button onclick="${disabled?'':'toggleBookTend(\''+t+'\')'}"
+          style="width:100%;padding:8px 12px;border-radius:8px;font-family:inherit;cursor:${disabled?'not-allowed':'pointer'};
+          background:${active?m.bg:'transparent'};border:1.5px solid ${active?m.color:disabled?'#1a2a1a':'var(--border2)'};
+          opacity:${disabled?'0.35':'1'};text-align:left;display:flex;align-items:flex-start;gap:8px">
+          <span style="font-size:16px;flex-shrink:0">${m.emoji}</span>
+          <span>
+            <span style="font-size:11px;font-weight:700;color:${active?m.color:disabled?'#2a3a2a':'#8aaa8a'}">${m.label}</span><br>
+            <span style="font-size:11px;color:${active?'#d4e8d4':disabled?'#2a3a2a':'#6a8a6a'};line-height:1.5">${m.desc}</span>
+          </span>
+        </button>`;
+      }).join('')}</div>
+    </div>`;
+}
+
+function setBookAxis(axis,val){
+  const newPro={...bookProfile,[axis]:val};
+  // 矛盾する傾向を自動削除
+  if(axis==='vpip'){
+    if(val===0) newPro.tends=bookProfile.tends.filter(t=>t!=='station'&&t!=='maniac');
+    if(val===2) newPro.tends=bookProfile.tends.filter(t=>t!=='nitroll');
+  }
+  if(axis==='agg'){
+    if(val===0) newPro.tends=bookProfile.tends.filter(t=>t!=='maniac');
+    if(val===2) newPro.tends=bookProfile.tends.filter(t=>t!=='station'&&t!=='folder');
+  }
+  bookProfile=newPro;
+  renderBookTagBtns();
+}
+function toggleBookTend(t){
+  if(bookProfile.tends.includes(t)){
+    bookProfile.tends=bookProfile.tends.filter(x=>x!==t);
+  } else {
+    const testPro={...bookProfile,tends:[...bookProfile.tends,t]};
+    if(getConflicts(testPro).has(t)) return;
+    bookProfile.tends=[...bookProfile.tends,t];
+  }
+  renderBookTagBtns();
+}
+
+function savePlayerFromBook(){
+  const name=document.getElementById('book-name-input').value.trim();
+  if(!name){alert('名前を入力してください');return;}
+  const isDefault=bookProfile.vpip===1&&bookProfile.agg===1&&bookProfile.skill===1&&bookProfile.tends.length===0;
+  if(isDefault){alert('プロフィールを設定してください');return;}
+  const players=loadPlayers();
+  const idx=players.findIndex(p=>p.name===name);
+  const profile={...bookProfile,tends:[...bookProfile.tends]};
+  if(idx>=0)players[idx]={name,profile};
+  else players.push({name,profile});
+  savePlayers(players);
+  document.getElementById('book-name-input').value='';
+  bookProfile={vpip:2,agg:2,skill:2,tends:[]};
+  renderBookTagBtns();
+  renderBookList();
+}
+
+function renderBookList(){
+  const players=loadPlayers();
+  document.getElementById('book-count').textContent=players.length+'人登録済み';
+  if(players.length===0){
+    document.getElementById('book-list').innerHTML=`<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:12px">登録済みプレイヤーはいません</div>`;
+    return;
+  }
+  document.getElementById('book-list').innerHTML=players.map(p=>{
+    const pro=p.profile||{vpip:2,agg:2,skill:2,tends:[]};
+    const chips=[
+      pro.vpip!==1?`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${VPIP_META[pro.vpip].color}22;color:${VPIP_META[pro.vpip].color};border:1px solid ${VPIP_META[pro.vpip].color}60">${VPIP_META[pro.vpip].emoji}${VPIP_META[pro.vpip].label}</span>`:null,
+      pro.agg!==1?`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${AGG_META[pro.agg].color}22;color:${AGG_META[pro.agg].color};border:1px solid ${AGG_META[pro.agg].color}60">${AGG_META[pro.agg].emoji}${AGG_META[pro.agg].label}</span>`:null,
+      pro.skill!==1?`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${SKILL_META[pro.skill].color}22;color:${SKILL_META[pro.skill].color};border:1px solid ${SKILL_META[pro.skill].color}60">${SKILL_META[pro.skill].emoji}${SKILL_META[pro.skill].label}</span>`:null,
+      ...pro.tends.map(t=>`<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${TEND_META[t].bg};color:${TEND_META[t].color};border:1px solid ${TEND_META[t].color}60">${TEND_META[t].emoji}${TEND_META[t].label}</span>`),
+    ].filter(Boolean).join('');
+    return`<div style="margin-bottom:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${p.name}</div>
+        <button onclick="deletePlayer('${p.name}')" style="padding:3px 8px;border-radius:4px;font-size:10px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">削除</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${chips}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── Action Builder ────────────────────────────────────────────
+let actionLog=[]; // [{type:'street',label:'Preflop'} | {type:'action',player,action,size}]
+let currentStreet='preflop';
+
+const STREET_LABELS={preflop:'[ Preflop ]',flop:'[ Flop ]',turn:'[ Turn ]',river:'[ River ]'};
+const ACTION_LABELS={fold:'Fold',check:'Check',call:'Call',bet:'Bet',raise:'Raise','3bet':'3-Bet',allin:'All-in'};
+const ACTION_COLORS={fold:'#f87171',check:'#94A3B8',call:'#FBBF24',bet:'#4ade80',raise:'#60A5FA','3bet':'#818CF8',allin:'#F97316'};
+
+function initActionBuilder(){
+  actionLog=[];
+  currentStreet='preflop';
+  updateStreetBtns();
+  renderAbPlayerSelect();
+  renderActionLog();
+}
+
+// 全ストリートにわたってフォールド済みのプレイヤーを追跡
+function getFoldedPlayers(){
+  const folded=new Set();
+  for(const e of actionLog){
+    if(e.type==='action'&&e.action==='fold') folded.add(e.player);
+  }
+  return folded;
+}
+
+function getActivePlayers(){
+  const p=pos();
+  const folded=getFoldedPlayers();
+  return p.filter(seat=>!folded.has(seat));
+}
+
+// ポストフロップのアクション順（SBから時計回り）
+function postFlopOrder(){
+  const allPos=pos();
+  // SB→BB→UTG...→BTN の順
+  const order=['SB','BB','UTG','UTG+1','MP','MP+1','HJ','CO','BTN'];
+  return order.filter(p=>allPos.includes(p));
+}
+
+// 現ストリートでまだアクションしていないアクティブプレイヤー取得
+function getUnarctedThisStreet(){
+  const active=new Set(getActivePlayers());
+  // 現ストリートのdivider以降のアクションを取得
+  let inCurrent=false;
+  const actedThisStreet=new Set();
+  for(const e of actionLog){
+    if(e.type==='street') inCurrent=(e.street===currentStreet);
+    if(inCurrent&&e.type==='action') actedThisStreet.add(e.player);
+  }
+  return [...active].filter(p=>!actedThisStreet.has(p));
+}
+
+// アクション追加時に自動フォールドを挿入
+// プリフロップ以外で、現在のプレイヤーより前に行動すべきだったプレイヤーを自動フォールド
+function getAutoFolds(currentPlayer){
+  if(currentStreet==='preflop') return [];
+  const order=postFlopOrder();
+  const unacted=getUnarctedThisStreet();
+  const curIdx=order.indexOf(currentPlayer);
+  if(curIdx<0) return [];
+  // currentPlayerより前の順番でまだ行動していないアクティブプレイヤー
+  return order
+    .slice(0,curIdx)
+    .filter(p=>unacted.includes(p));
+}
+
+function renderAbPlayerSelect(){
+  const sel=document.getElementById('ab-player');
+  if(!sel)return;
+  const active=getActivePlayers();
+  const p=pos();
+  sel.innerHTML=active.map(seat=>{
+    const i=p.indexOf(seat);
+    const isHero=i===state.heroIdx;
+    const pro=state.seatProfiles[i];
+    const pname=pro?.name||'';
+    const label=isHero
+      ?`★ Hero(${seat})`
+      :pname?`${seat}(${pname})`:seat;
+    return`<option value="${seat}">${label}</option>`;
+  }).join('');
+  if(active.includes(heroPos())) sel.value=heroPos();
+  else if(active.length>0) sel.value=active[0];
+}
+
+function addStreetDivider(street){
+  actionLog=actionLog.filter(e=>!(e.type==='street'&&e.street===street));
+  currentStreet=street;
+  actionLog.push({type:'street',street,label:STREET_LABELS[street]});
+  updateStreetBtns();
+  renderAbPlayerSelect();
+  renderActionLog();
+}
+
+function updateStreetBtns(){
+  ['preflop','flop','turn','river'].forEach(s=>{
+    const btn=document.getElementById('sb-'+{preflop:'pre',flop:'flop',turn:'turn',river:'rvr'}[s]);
+    if(btn) btn.className='street-btn'+(s===currentStreet?' active':'');
+  });
+}
+
+function onAbActionChange(){
+  const act=document.getElementById('ab-action')?.value;
+  const row=document.getElementById('ab-size-row');
+  if(row) row.style.display=(act==='bet'||act==='raise'||act==='3bet')?'block':'none';
+}
+
+function setAbSize(multiplier){
+  const pot=parseFloat(document.getElementById('log-pot')?.value)||0;
+  let estPot=pot||1.5;
+  actionLog.filter(e=>e.type==='action'&&e.size).forEach(e=>{
+    estPot+=parseFloat(e.size)||0;
+  });
+  const size=(estPot*parseFloat(multiplier)).toFixed(1);
+  const inp=document.getElementById('ab-size');
+  if(inp) inp.value=size;
+}
+
+function addAction(){
+  const player=document.getElementById('ab-player')?.value||'';
+  const action=document.getElementById('ab-action')?.value||'';
+  const sizeEl=document.getElementById('ab-size');
+  const size=sizeEl?.value||'';
+  const needsSize=action==='bet'||action==='raise'||action==='3bet';
+
+  // 自動フォールド：このプレイヤーより前にアクションすべきだった人を自動フォールド
+  const autoFolds=getAutoFolds(player);
+  autoFolds.forEach(p=>{
+    actionLog.push({type:'action',player:p,action:'fold',size:'',auto:true});
+  });
+
+  actionLog.push({type:'action',player,action,size:needsSize?size:'',auto:false});
+  if(sizeEl) sizeEl.value='';
+  renderAbPlayerSelect();
+  renderActionLog();
+}
+
+function deleteAction(idx){
+  actionLog.splice(idx,1);
+  renderAbPlayerSelect(); // 削除後に再計算
+  renderActionLog();
+}
+
+function clearActions(){
+  actionLog=[];
+  currentStreet='preflop';
+  updateStreetBtns();
+  renderActionLog();
+}
+
+function renderActionLog(){
+  const container=document.getElementById('action-log');
+  if(!container)return;
+  if(actionLog.length===0){container.innerHTML='';return;}
+  container.innerHTML=actionLog.map((e,i)=>{
+    if(e.type==='street'){
+      return`<div class="action-entry street-div">${e.label}<button class="action-del" onclick="deleteAction(${i})">✕</button></div>`;
+    }
+    const isHero=e.player===heroPos();
+    const aLabel=ACTION_LABELS[e.action]||e.action;
+    const aColor=ACTION_COLORS[e.action]||'#e2f0e2';
+    const sizeStr=e.size?` <span style="color:#FBBF24">${e.size}bb</span>`:'';
+    const autoTag=e.auto?`<span style="font-size:9px;color:#475569;margin-left:4px">AUTO</span>`:'';
+    return`<div class="action-entry action-row" style="${e.auto?'opacity:0.6':''}">
+      const pIdx=pos().indexOf(e.player);
+      const pname=pIdx>=0?(state.seatProfiles[pIdx]?.name||''):'';
+      const displayName=isHero?'★ Hero':pname?(e.player+'('+pname+')'):e.player;
+      <span style="color:${isHero?'var(--gold)':'var(--text-dim)'};font-weight:700;min-width:52px">${displayName}</span>
+      <span style="color:${aColor};font-weight:700">${aLabel}</span>${sizeStr}${autoTag}
+      <button class="action-del" onclick="deleteAction(${i})">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function buildActionString(){
+  return actionLog.map(e=>{
+    if(e.type==='street') return e.label;
+    const isHero=e.player===heroPos();
+    const aLabel=ACTION_LABELS[e.action]||e.action;
+    const size=e.size?` ${e.size}bb`:'';
+    return`${isHero?'Hero('+e.player+')':e.player}: ${aLabel}${size}`;
+  }).join('\n');
+}
+const SUITS=[
+  {sym:'♠',key:'s',color:'#1a1a2e'},
+  {sym:'♥',key:'h',color:'#8B0000'},
+  {sym:'♦',key:'d',color:'#8B0000'},
+  {sym:'♣',key:'c',color:'#1a1a2e'},
+];
+const CARD_RANKS=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+
+let pickerMode=null; // 'hand' | 'board'
+let heroCards=[null,null];    // ['As','Kh'] etc
+let boardCards=[null,null,null,null,null];
+let pickerSelected=[];        // cards currently being edited
+
+function cardDisplay(card){
+  if(!card) return null;
+  const rank=card.slice(0,-1);
+  const suitKey=card.slice(-1);
+  const suit=SUITS.find(s=>s.key===suitKey);
+  const sym={'s':'♠','h':'♥','d':'♦','c':'♣'}[suitKey]||'';
+  const color=suitKey==='h'||suitKey==='d'?'#cc2200':'#111';
+  return{rank,sym,color};
+}
+
+function renderCardSlot(id,card){
+  const el=document.getElementById(id);
+  if(!el)return;
+  if(!card){
+    el.className='card-slot';el.textContent='?';el.style='';
+    return;
+  }
+  const{rank,sym,color}=cardDisplay(card);
+  el.className='playing-card';
+  el.innerHTML=`<div class="rank" style="color:${color}">${rank}</div><div class="suit-sym" style="color:${color}">${sym}</div>`;
+}
+
+function refreshCardDisplays(){
+  heroCards.forEach((c,i)=>renderCardSlot(`hero-card-${i}`,c));
+  boardCards.forEach((c,i)=>renderCardSlot(`board-card-${i}`,c));
+}
+
+function openCardPicker(mode){
+  pickerMode=mode;
+  pickerSelected=mode==='hand'?[...heroCards].filter(Boolean):[...boardCards].filter(Boolean);
+  document.getElementById('picker-title').textContent=
+    mode==='hand'?'ハンドを選択（2枚）':'ボードを選択（最大5枚）';
+  renderPickerGrid();
+  const ov=document.getElementById('card-picker-overlay');
+  ov.style.opacity='1';ov.style.pointerEvents='all';
+}
+
+function closeCardPicker(){
+  // Commit selection
+  if(pickerMode==='hand'){
+    heroCards=[pickerSelected[0]||null,pickerSelected[1]||null];
+  } else {
+    boardCards=[0,1,2,3,4].map(i=>pickerSelected[i]||null);
+  }
+  refreshCardDisplays();
+  const ov=document.getElementById('card-picker-overlay');
+  ov.style.opacity='0';ov.style.pointerEvents='none';
+  pickerMode=null;
+}
+
+function clearPickerSelection(){
+  pickerSelected=[];
+  renderPickerGrid();
+}
+
+function allUsedCards(){
+  // Cards already committed to the other slot
+  if(pickerMode==='hand') return boardCards.filter(Boolean);
+  return heroCards.filter(Boolean);
+}
+
+function getPickerMaxCards(){
+  if(pickerMode==='hand') return 2;
+  if(pickerMode==='eq-hero'||pickerMode==='eq-villain') return 2;
+  return 5; // board, eq-board
+}
+
+function togglePickerCard(card){
+  const maxCards=getPickerMaxCards();
+  const idx=pickerSelected.indexOf(card);
+  if(idx>=0){
+    pickerSelected.splice(idx,1);
+  } else {
+    if(pickerSelected.length>=maxCards) return;
+    pickerSelected.push(card);
+  }
+  renderPickerGrid();
+}
+
+function renderPickerGrid(){
+  const used=allUsedCards();
+  const maxCards=getPickerMaxCards();
+
+  // Preview
+  const preview=document.getElementById('picker-preview');
+  const slots=Array.from({length:maxCards},(_,i)=>{
+    const c=pickerSelected[i];
+    if(!c) return`<div class="card-slot" style="width:34px;height:48px;font-size:16px">?</div>`;
+    const{rank,sym,color}=cardDisplay(c);
+    return`<div class="playing-card" style="width:34px;height:48px"><div class="rank" style="color:${color};font-size:13px">${rank}</div><div class="suit-sym" style="color:${color};font-size:11px">${sym}</div></div>`;
+  });
+  // Board: add dividers between flop/turn/river
+  if(pickerMode==='board'){
+    slots.splice(3,0,`<div style="width:1px;height:40px;background:var(--border2)"></div>`);
+    slots.splice(5,0,`<div style="width:1px;height:40px;background:var(--border2)"></div>`);
+  }
+  preview.innerHTML=slots.join('');
+
+  // Card grid
+  const grid=document.getElementById('picker-grid');
+  grid.innerHTML=SUITS.map(suit=>`
+    <div style="margin-bottom:10px">
+      <div style="font-size:12px;color:${suit.key==='h'||suit.key==='d'?'#cc4444':'#8888aa'};font-weight:700;margin-bottom:5px">${suit.sym}</div>
+      <div style="display:grid;grid-template-columns:repeat(13,1fr);gap:3px">
+        ${CARD_RANKS.map(rank=>{
+          const card=rank+suit.key;
+          const isSelected=pickerSelected.includes(card);
+          const isUsed=used.includes(card);
+          const rankColor=suit.key==='h'||suit.key==='d'?'#cc2200':'#e8e8f0';
+          let bg='#1a2a1a',border='var(--border2)',opacity='1',cursor='pointer';
+          if(isSelected){bg='#f5f0e8';border='#c9a227';}
+          else if(isUsed){bg='#0a0a0a';border='#111';opacity='0.3';cursor='not-allowed';}
+          else if(pickerSelected.length>=maxCards){opacity='0.5';cursor='not-allowed';}
+          return`<button class="card-pick-btn" onclick="togglePickerCard('${card}')"
+            style="background:${bg};border:1.5px solid ${border};opacity:${opacity};cursor:${cursor};padding:2px 0">
+            <span style="font-size:11px;font-weight:800;color:${isSelected?rankColor:'var(--text-dim)'};line-height:1">${rank}</span>
+          </button>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+}
+
+function getHandString(){
+  const cards=heroCards.filter(Boolean);
+  return cards.length===2?`${cards[0]} ${cards[1]}`:'（未選択）';
+}
+
+function getBoardString(){
+  const flop=boardCards.slice(0,3).filter(Boolean);
+  const turn=boardCards[3];
+  const river=boardCards[4];
+  if(flop.length===0) return'（未選択）';
+  let s=flop.join(' ');
+  if(turn) s+=' / '+turn;
+  if(river) s+=' / '+river;
+  return s;
+}
+function renderVillainStacks(){
+  // Init action builder only
+  renderAbPlayerSelect();
+  if(actionLog.length===0) initActionBuilder();
+  else renderActionLog();
+  updateStreetBtns();
+}
+
+function buildTableContext(){
+  const p=pos();
+  const lines=[];
+  lines.push(`テーブル: ${state.tableSize}max, Hero: ${heroPos()}, レーキ: ${state.rake}%`);
+  p.forEach((seat,i)=>{
+    if(i===state.heroIdx)return;
+    const pro=profileOf(i);
+    const hasPro=hasProfile(i);
+    const vstack=document.getElementById(`vstack-${i}`)?.value;
+    const stackStr=vstack?` スタック:${vstack}BB`:'';
+    if(hasPro){
+      const vc=VPIP_META[pro.vpip].label,ac=AGG_META[pro.agg].label,sc=SKILL_META[pro.skill].label;
+      const tends=pro.tends.map(t=>TEND_META[t].label).join('/');
+      lines.push(`${seat}: レンジ幅=${vc}, アグレ=${ac}, スキル=${sc}${tends?', '+tends:''}${stackStr}`);
+    } else {
+      lines.push(`${seat}: プロフィール未設定${stackStr}`);
+    }
+  });
+  return lines.join('\n');
+}
+
+async function evaluatePlay(){
+  const hand=getHandString();
+  const board=getBoardString();
+  // スタックはレンジタブの設定を自動参照
+  const stack=state.stackSize+'BB（レンジ設定より）';
+  const pot='';
+  const action=buildActionString();
+  const question=document.getElementById('log-question').value.trim();
+  const street=currentStreet;
+
+  if(heroCards.filter(Boolean).length<2){alert('ハンドを2枚選択してください');return;}
+  if(actionLog.filter(e=>e.type==='action').length===0){alert('アクションを1つ以上追加してください');return;}
+
+  const btn=document.getElementById('eval-btn');
+  btn.textContent='🤖 評価中...';btn.disabled=true;btn.style.opacity='0.6';
+
+  const tableCtx=buildTableContext();
+  const prompt=`あなたはテキサスホールデムポーカーの専門コーチです。以下のプレーを評価してください。
+
+【テーブル状況】
+${tableCtx}
+
+【ハンド情報】
+- Heroのハンド: ${hand}
+- Heroのスタック: ${stack||'不明'}BB
+- ストリート: ${street}
+- ポットサイズ: ${pot||'不明'}BB
+${board?`- ボード: ${board}`:''}
+
+【アクション経緯】
+${action}
+
+【評価してほしいポイント】
+${question||'全体的な判断を評価してください'}
+
+【評価形式】
+以下の形式で回答してください：
+
+評価: [★★★★★ / ★★★★☆ / ★★★☆☆ / ★★☆☆☆ / ★☆☆☆☆]
+一言: [10文字以内の核心]
+
+詳細コメント:
+[200文字程度で、対戦相手のプロフィールを考慮した具体的なフィードバック。良い点・改善点・代替ライン（もしあれば）を含めてください。]`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.[0]?.text||'評価に失敗しました';
+
+    // Parse rating
+    const ratingMatch=text.match(/評価[:：]\s*([★☆]+)/);
+    const onelineMatch=text.match(/一言[:：]\s*(.+)/);
+    const commentMatch=text.match(/詳細コメント[:：]?\s*\n([\s\S]+)/);
+
+    const rating=ratingMatch?ratingMatch[1]:'—';
+    const oneline=onelineMatch?onelineMatch[1].trim():'';
+    const comment=commentMatch?commentMatch[1].trim():text;
+
+    // Stars color based on count
+    const starCount=(rating.match(/★/g)||[]).length;
+    const starColor=starCount>=4?'#4ade80':starCount===3?'#FBBF24':starCount<=2?'#f87171':'#FBBF24';
+
+    document.getElementById('eval-rating').innerHTML=
+      `<span style="font-size:24px">${rating}</span>`+
+      `<div><div style="font-size:13px;font-weight:700;color:${starColor}">${oneline}</div></div>`;
+    document.getElementById('eval-comment').textContent=comment;
+    document.getElementById('eval-result').style.display='block';
+  }catch(e){
+    document.getElementById('eval-comment').textContent='エラーが発生しました。再試行してください。';
+    document.getElementById('eval-result').style.display='block';
+  }finally{
+    btn.textContent='🤖 AIに評価してもらう';btn.disabled=false;btn.style.opacity='1';
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// EQUITY CALCULATOR
+// ════════════════════════════════════════════════════════════
+
+// ── State ─────────────────────────────────────────────────
+let eqHeroCards   = [null, null];
+let eqVillainCards= [null, null];
+let eqBoardCards  = [null, null, null, null, null];
+let eqMode        = 'hand'; // 'hand' | 'range'
+let eqVillainRange= new Set(); // HandKeys selected for range
+let eqPickerTarget= null; // 'hero'|'villain'|'board'
+
+// ── Hand Evaluator ────────────────────────────────────────
+const RANK_VAL = {
+  '2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,
+  '9':9,'T':10,'J':11,'Q':12,'K':13,'A':14
+};
+function cRank(card){ return RANK_VAL[card[0]]; }
+function cSuit(card){ return card[1]; }
+
+function evaluate5(cards){
+  const ranks = cards.map(cRank).sort((a,b)=>b-a);
+  const suits = cards.map(cSuit);
+  const isFlush = new Set(suits).size === 1;
+  const uniq = [...new Set(ranks)];
+
+  // Straight check
+  let straight = 0;
+  if(uniq.length===5){
+    if(ranks[0]-ranks[4]===4) straight=ranks[0];
+    // Wheel A-2-3-4-5
+    if(ranks[0]===14&&ranks[1]===5&&ranks[2]===4&&ranks[3]===3&&ranks[4]===2) straight=5;
+  }
+
+  // Count groups
+  const cnt={};
+  ranks.forEach(r=>cnt[r]=(cnt[r]||0)+1);
+  const groups=Object.entries(cnt).sort((a,b)=>b[1]-a[1]||b[0]-a[0]);
+  const g=groups.map(x=>parseInt(x[1])); // e.g. [4,1] or [3,2]
+  const r=groups.map(x=>parseInt(x[0]));
+
+  if(isFlush&&straight===14) return[9,14];
+  if(isFlush&&straight)      return[8,straight];
+  if(g[0]===4)               return[7,r[0],r[1]];
+  if(g[0]===3&&g[1]===2)     return[6,r[0],r[1]];
+  if(isFlush)                return[5,...ranks];
+  if(straight)               return[4,straight];
+  if(g[0]===3)               return[3,r[0],r[1],r[2]];
+  if(g[0]===2&&g[1]===2)     return[2,r[0],r[1],r[2]];
+  if(g[0]===2)               return[1,r[0],r[1],r[2],r[3]];
+  return[0,...ranks];
+}
+
+function cmpHands(a,b){
+  const len=Math.max(a.length,b.length);
+  for(let i=0;i<len;i++){
+    if((a[i]||0)>(b[i]||0)) return 1;
+    if((a[i]||0)<(b[i]||0)) return -1;
+  }
+  return 0;
+}
+
+function best5from7(cards){
+  let best=null;
+  for(let i=0;i<cards.length-1;i++)
+    for(let j=i+1;j<cards.length;j++){
+      const five=cards.filter((_,k)=>k!==i&&k!==j);
+      const v=evaluate5(five);
+      if(!best||cmpHands(v,best)>0) best=v;
+    }
+  return best;
+}
+
+const HAND_NAMES=['ハイカード','ワンペア','ツーペア','スリーカード','ストレート',
+  'フラッシュ','フルハウス','フォーカード','ストレートフラッシュ','ロイヤルフラッシュ'];
+
+// ── Range preset (BTN GTO approx) ────────────────────────
+const EQ_RANGE_TIERS = [
+  // Tier 1 — top ~10%
+  ['AA','KK','QQ','JJ','AKs','AKo'],
+  // Tier 2 — top ~20%
+  ['TT','99','88','AQs','AQo','AJs','KQs','AJo','ATs'],
+  // Tier 3 — top ~30%
+  ['77','66','KJs','KQo','ATo','A9s','KTs','QJs','A8s','JTs','A5s'],
+];
+
+function setEqRangePreset(level){
+  eqVillainRange.clear();
+  const tiers = level==='top10'?1 : level==='top20'?2 : 3;
+  for(let t=0;t<tiers;t++) EQ_RANGE_TIERS[t].forEach(h=>eqVillainRange.add(h));
+  renderEqRangeMatrix();
+  updateEqRangeCount();
+}
+
+function clearEqRange(){
+  eqVillainRange.clear();
+  renderEqRangeMatrix();
+  updateEqRangeCount();
+}
+
+function updateEqRangeCount(){
+  // Count combos
+  let combos=0;
+  eqVillainRange.forEach(k=>{
+    if(k.length===2) combos+=6;          // pair
+    else if(k.endsWith('s')) combos+=4;  // suited
+    else combos+=12;                     // offsuit
+  });
+  const el=document.getElementById('eq-range-count');
+  if(el) el.textContent=`${eqVillainRange.size}ハンド / 約${combos}コンボ`;
+}
+
+function toggleEqRangeHand(key){
+  if(eqVillainRange.has(key)) eqVillainRange.delete(key);
+  else eqVillainRange.add(key);
+  renderEqRangeMatrix();
+  updateEqRangeCount();
+}
+
+function renderEqRangeMatrix(){
+  const el=document.getElementById('eq-range-matrix');
+  if(!el) return;
+  const vw=Math.min(window.innerWidth,440);
+  const cw=Math.floor((vw-28-16-16)/13);
+  const ch=Math.max(18,Math.floor(cw*0.8));
+  let html=`<div style="display:flex;margin-left:18px;margin-bottom:2px">`;
+  RANKS.forEach(r=>{html+=`<div style="width:${cw}px;text-align:center;font-size:${Math.max(5,cw*0.28)}px;color:var(--text-dim)">${r}</div>`;});
+  html+='</div>';
+  RANKS.forEach((r1,ri)=>{
+    html+=`<div style="display:flex;margin-bottom:1px;align-items:center">`;
+    html+=`<div style="width:18px;font-size:${Math.max(5,cw*0.26)}px;color:var(--text-dim);text-align:right;padding-right:2px">${r1}</div>`;
+    RANKS.forEach((r2,ci)=>{
+      const key=ri===ci?r1+r2:ri<ci?r1+r2+'s':r2+r1+'o';
+      const sel=eqVillainRange.has(key);
+      const isPair=ri===ci,isSuited=ri<ci;
+      const label=isPair?r1:isSuited?r1+r2:r2+r1;
+      const bg=sel?(isPair?'#b45309':isSuited?'#16a34a':'#1d4ed8'):'#111f11';
+      const border=sel?'#fff':'#2a3a2a';
+      html+=`<div onclick="toggleEqRangeHand('${key}')"
+        style="width:${cw}px;height:${ch}px;background:${bg};border:1px solid ${border};border-radius:2px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0">
+        <span style="font-size:${Math.max(5,cw*0.28)}px;font-weight:700;color:${sel?'#fff':'#3a4a3a'}">${label}</span>
+      </div>`;
+    });
+    html+='</div>';
+  });
+  el.innerHTML=html;
+}
+
+// ── Mode toggle ────────────────────────────────────────────
+function setEqMode(mode){
+  eqMode=mode;
+  document.getElementById('eq-villain-hand-section').style.display=mode==='hand'?'block':'none';
+  document.getElementById('eq-villain-range-section').style.display=mode==='range'?'block':'none';
+  document.getElementById('eq-mode-hand-btn').style.cssText+=`;background:${mode==='hand'?'var(--gold)':'transparent'};color:${mode==='hand'?'#0a1a0a':'var(--text-dim)'};border:${mode==='hand'?'none':'1px solid var(--border2)'}`;
+  document.getElementById('eq-mode-range-btn').style.cssText+=`;background:${mode==='range'?'var(--gold)':'transparent'};color:${mode==='range'?'#0a1a0a':'var(--text-dim)'};border:${mode==='range'?'none':'1px solid var(--border2)'}`;
+  if(mode==='range') renderEqRangeMatrix();
+}
+
+// ── Card picker for equity tab ─────────────────────────────
+function openEqPicker(target){
+  eqPickerTarget=target;
+  const maxCards=target==='board'?5:2;
+  let current=[];
+  if(target==='hero')    current=eqHeroCards.filter(Boolean);
+  if(target==='villain') current=eqVillainCards.filter(Boolean);
+  if(target==='board')   current=eqBoardCards.filter(Boolean);
+  pickerSelected=[...current];
+  const titles={hero:'ヒーローのハンド (2枚)',villain:'相手のハンド (2枚)',board:'ボード (最大5枚)'};
+  document.getElementById('picker-title').textContent=titles[target]||'カードを選択';
+  // Override pickerMode so allUsedCards works
+  pickerMode='eq-'+target;
+  renderPickerGrid();
+  const ov=document.getElementById('card-picker-overlay');
+  ov.style.opacity='1';ov.style.pointerEvents='all';
+}
+
+// Override closeCardPicker to handle eq targets
+const _origCloseCardPicker=window.closeCardPicker;
+window.closeCardPicker=function(){
+  if(pickerMode&&pickerMode.startsWith('eq-')){
+    const t=pickerMode.slice(3);
+    if(t==='hero')    eqHeroCards=[pickerSelected[0]||null,pickerSelected[1]||null];
+    if(t==='villain') eqVillainCards=[pickerSelected[0]||null,pickerSelected[1]||null];
+    if(t==='board')   eqBoardCards=[0,1,2,3,4].map(i=>pickerSelected[i]||null);
+    refreshEqDisplays();
+    const ov=document.getElementById('card-picker-overlay');
+    ov.style.opacity='0';ov.style.pointerEvents='none';
+    pickerMode=null;
+  } else {
+    // Original log tab behavior
+    if(pickerMode==='hand'){
+      heroCards=[pickerSelected[0]||null,pickerSelected[1]||null];
+    } else if(pickerMode==='board'){
+      boardCards=[0,1,2,3,4].map(i=>pickerSelected[i]||null);
+    }
+    refreshCardDisplays();
+    const ov=document.getElementById('card-picker-overlay');
+    ov.style.opacity='0';ov.style.pointerEvents='none';
+    pickerMode=null;
+  }
+};
+
+// Override allUsedCards to handle eq modes
+const _origAllUsedCards=window.allUsedCards;
+window.allUsedCards=function(){
+  if(pickerMode&&pickerMode.startsWith('eq-')){
+    const t=pickerMode.slice(3);
+    const all=[...eqHeroCards,...eqVillainCards,...eqBoardCards].filter(Boolean);
+    if(t==='hero')    return [...eqVillainCards,...eqBoardCards].filter(Boolean);
+    if(t==='villain') return [...eqHeroCards,...eqBoardCards].filter(Boolean);
+    if(t==='board')   return [...eqHeroCards,...eqVillainCards].filter(Boolean);
+    return all;
+  }
+  if(pickerMode==='hand') return boardCards.filter(Boolean);
+  return heroCards.filter(Boolean);
+};
+
+function refreshEqDisplays(){
+  const set=(id,card)=>{
+    const el=document.getElementById(id);
+    if(!el) return;
+    if(!card){el.className='card-slot';el.innerHTML='?';return;}
+    const{rank,sym,color}=cardDisplay(card);
+    el.className='playing-card';
+    el.innerHTML=`<div class="rank" style="color:${color}">${rank}</div><div class="suit-sym" style="color:${color}">${sym}</div>`;
+  };
+  eqHeroCards.forEach((c,i)=>set(`eq-hero-${i}`,c));
+  eqVillainCards.forEach((c,i)=>set(`eq-villain-${i}`,c));
+  eqBoardCards.forEach((c,i)=>set(`eq-board-${i}`,c));
+}
+
+// ── Monte Carlo Simulation ────────────────────────────────
+function buildDeck(usedCards){
+  const used=new Set(usedCards.filter(Boolean));
+  const deck=[];
+  ['A','K','Q','J','T','9','8','7','6','5','4','3','2'].forEach(r=>
+    ['s','h','d','c'].forEach(s=>{ const c=r+s; if(!used.has(c)) deck.push(c); })
+  );
+  return deck;
+}
+
+function shuffle(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+
+// Expand range HandKeys to actual card pairs (excluding used cards)
+function expandRange(rangeKeys, usedCards){
+  const used=new Set(usedCards.filter(Boolean));
+  const suits=['s','h','d','c'];
+  const pairs=[];
+  rangeKeys.forEach(key=>{
+    const isPair=key.length===2&&key[0]===key[1];
+    const isSuited=key.endsWith('s')&&key.length===3;
+    const r1=key[0],r2=isPair?key[1]:key[1];
+    if(isPair){
+      for(let i=0;i<4;i++) for(let j=i+1;j<4;j++){
+        const c1=r1+suits[i],c2=r1+suits[j];
+        if(!used.has(c1)&&!used.has(c2)) pairs.push([c1,c2]);
+      }
+    } else if(isSuited){
+      suits.forEach(s=>{ const c1=r1+s,c2=r2+s; if(!used.has(c1)&&!used.has(c2)) pairs.push([c1,c2]); });
+    } else {
+      // offsuit
+      const rank1=key[0],rank2=key[1];
+      suits.forEach(s1=>suits.forEach(s2=>{
+        if(s1===s2) return;
+        const c1=rank1+s1,c2=rank2+s2;
+        if(!used.has(c1)&&!used.has(c2)) pairs.push([c1,c2]);
+      }));
+    }
+  });
+  return pairs;
+}
+
+async function calculateEquity(){
+  const hero=eqHeroCards.filter(Boolean);
+  if(hero.length<2){alert('ヒーローのハンドを2枚選択してください');return;}
+
+  let villainPairs=[];
+  if(eqMode==='hand'){
+    const vil=eqVillainCards.filter(Boolean);
+    if(vil.length<2){alert('相手のハンドを2枚選択してください');return;}
+    villainPairs=[[vil[0],vil[1]]];
+  } else {
+    if(eqVillainRange.size===0){alert('相手のレンジを選択してください');return;}
+  }
+
+  const board=eqBoardCards.filter(Boolean);
+  const cardsNeeded=5-board.length;
+
+  const btn=document.getElementById('eq-calc-btn');
+  btn.textContent='計算中...';btn.disabled=true;
+
+  // Give UI time to update
+  await new Promise(r=>setTimeout(r,10));
+
+  const ITER=5000;
+  let heroWin=0,vilWin=0,ties=0;
+
+  for(let i=0;i<ITER;i++){
+    let vilHand;
+    if(eqMode==='hand'){
+      vilHand=villainPairs[0];
+    } else {
+      const used=[...hero,...board];
+      const available=expandRange(eqVillainRange,used);
+      if(available.length===0){vilWin++;continue;}
+      vilHand=available[Math.floor(Math.random()*available.length)];
+    }
+
+    const used=[...hero,...vilHand,...board];
+    const deck=shuffle(buildDeck(used));
+    const runBoard=[...board,...deck.slice(0,cardsNeeded)];
+
+    const heroAll=[...hero,...runBoard];
+    const vilAll=[...vilHand,...runBoard];
+
+    const hv=heroAll.length>=5?best5from7(heroAll):null;
+    const vv=vilAll.length>=5?best5from7(vilAll):null;
+
+    if(!hv||!vv){ties++;continue;}
+    const cmp=cmpHands(hv,vv);
+    if(cmp>0) heroWin++;
+    else if(cmp<0) vilWin++;
+    else ties++;
+  }
+
+  btn.textContent='♠ エクイティを計算する';btn.disabled=false;
+
+  const hPct=(heroWin/ITER*100).toFixed(1);
+  const vPct=(vilWin/ITER*100).toFixed(1);
+  const tPct=(ties/ITER*100).toFixed(1);
+
+  // Update bar
+  document.getElementById('eq-bar-hero').style.width=hPct+'%';
+  document.getElementById('eq-bar-vil').style.width=vPct+'%';
+  const tLeft=parseFloat(hPct),tWidth=parseFloat(tPct);
+  document.getElementById('eq-bar-tie').style.left=tLeft+'%';
+  document.getElementById('eq-bar-tie').style.width=tWidth+'%';
+
+  document.getElementById('eq-pct-hero').textContent=hPct+'%';
+  document.getElementById('eq-pct-vil').textContent=vPct+'%';
+  document.getElementById('eq-pct-tie').textContent=tPct+'%';
+
+  // Hand info
+  const heroStr=hero.join(' ');
+  const vilStr=eqMode==='hand'?eqVillainCards.filter(Boolean).join(' '):`レンジ(${eqVillainRange.size}ハンド)`;
+  const boardStr=board.length>0?`  ボード: ${board.join(' ')}`:'  (プリフロップ)';
+  document.getElementById('eq-hand-info').textContent=
+    `Hero: ${heroStr}  vs  ${vilStr}\n${boardStr}`;
+
+  document.getElementById('eq-results').style.display='block';
+}
+
+// ── Haptics ───────────────────────────────────────────────────
+function haptic(type='light'){
+  // iOS Safari: AudioContext経由の無音 + Taptic
+  if(window.navigator?.vibrate){
+    const dur=type==='heavy'?20:type==='medium'?12:6;
+    window.navigator.vibrate(dur);
+  }
+  // Web Vibration APIが使えない場合（iOSメイン）は無音で処理
+}
+
+// ボタン全体にハプティクスを付与（イベント委譲）
+document.addEventListener('touchstart', e=>{
+  const btn=e.target.closest('button');
+  if(btn&&!btn.disabled) haptic('light');
+},{passive:true});
+(function(){
+  let currentSlide=0;
+  const TOTAL=3;
+
+  function showOnboarding(){
+    // 開発中は毎回表示。リリース時は下記に変更:
+    // if(localStorage.getItem('ra_onboarded')) finishOnboarding(false);
+  }
+
+  function obGoTo(n){
+    const prev=currentSlide;
+    currentSlide=n;
+    // Animate slides
+    for(let i=0;i<TOTAL;i++){
+      const el=document.getElementById('ob-slide-'+i);
+      if(!el) continue;
+      el.style.transform=i<n?'translateX(-100%)':i===n?'translateX(0%)':'translateX(100%)';
+    }
+    // Dots
+    for(let i=0;i<TOTAL;i++){
+      const d=document.getElementById('ob-dot-'+i);
+      if(d) d.className='ob-dot'+(i===n?' active':'');
+    }
+    // Button label
+    const btn=document.getElementById('ob-next-btn');
+    if(btn) btn.textContent=n===TOTAL-1?'始める':'次へ';
+  }
+
+  window.obNext=function(){
+    if(currentSlide<TOTAL-1){ obGoTo(currentSlide+1); }
+    else{ finishOnboarding(true); }
+  };
+  window.obSkip=function(){ finishOnboarding(true); };
+
+  function finishOnboarding(save){
+    if(save) localStorage.setItem('ra_onboarded','1');
+    const el=document.getElementById('onboarding');
+    if(el){ el.style.opacity='0';el.style.transition='opacity .4s';setTimeout(()=>el.style.display='none',400); }
+  }
+
+  // Swipe support
+  let startX=0;
+  const slides=document.getElementById('ob-slides');
+  if(slides){
+    slides.addEventListener('touchstart',e=>{startX=e.touches[0].clientX;},{passive:true});
+    slides.addEventListener('touchend',e=>{
+      const dx=e.changedTouches[0].clientX-startX;
+      if(dx<-50&&currentSlide<TOTAL-1) obGoTo(currentSlide+1);
+      if(dx>50&&currentSlide>0) obGoTo(currentSlide-1);
+    },{passive:true});
+  }
+
+  showOnboarding();
+})();
+
+function renderAll(){
+  renderTable();renderHeroBar();renderSeatList();renderPosBtns();renderLogPosBtns();updateExploitButton();
+  if(state.currentTab==='range')renderMatrix();
+}
+
+renderAll();
+</script>
+
