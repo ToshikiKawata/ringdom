@@ -505,9 +505,13 @@ button:active{transform:scale(0.94);opacity:0.85}
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">評価してほしいポイント</div>
       <textarea id="log-question" rows="2" placeholder="例: 3betは正しかった？ベットサイズは？" style="width:100%;padding:8px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;outline:none;resize:none;line-height:1.5"></textarea>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:14px;text-align:center">
-      <div style="font-size:12px;font-weight:700;color:var(--gold);margin-bottom:4px">AI評価機能</div>
-      <div style="font-size:11px;color:var(--text-dim);line-height:1.6">正式リリース時に実装予定です。<br>アクション経緯の記録機能は引き続き使用できます。</div>
+    <button onclick="evaluatePlay()" id="eval-btn" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:none;margin-bottom:14px">
+      AIに評価してもらう
+    </button>
+    <div id="eval-result" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px">
+      <div style="font-size:9px;color:var(--gold);letter-spacing:1.5px;margin-bottom:10px">AI評価</div>
+      <div id="eval-rating" style="font-size:22px;margin-bottom:8px;padding-bottom:10px;border-bottom:1px solid var(--border)"></div>
+      <div id="eval-comment" style="font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap"></div>
     </div>
   </div><div class="panel" id="panel-eq" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--green-dark);padding:12px 14px 20px;overflow-y:auto;z-index:10;display:none">
   <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:12px">EQUITY CALCULATOR</div>
@@ -2691,9 +2695,7 @@ function buildTableContext(){
 async function evaluatePlay(){
   const hand=getHandString();
   const board=getBoardString();
-  // スタックはレンジタブの設定を自動参照
   const stack=state.stackSize+'BB（レンジ設定より）';
-  const pot='';
   const action=buildActionString();
   const question=document.getElementById('log-question').value.trim();
   const street=currentStreet;
@@ -2702,28 +2704,27 @@ async function evaluatePlay(){
   if(actionLog.filter(e=>e.type==='action').length===0){alert('アクションを1つ以上追加してください');return;}
 
   const btn=document.getElementById('eval-btn');
-  btn.textContent='🤖 評価中...';btn.disabled=true;btn.style.opacity='0.6';
+  btn.textContent='評価中...';btn.disabled=true;btn.style.opacity='0.6';
 
+  // テーブル状況をプロンプトに含める
   const tableCtx=buildTableContext();
-  const prompt=`あなたはテキサスホールデムポーカーの専門コーチです。以下のプレーを評価してください。
+
+  const prompt=`あなたはプロのポーカーコーチです。以下のハンドを評価してください。
+
+【ハンド情報】
+ヒーローのハンド: ${hand}
+ボード: ${board}
+スタック: ${stack}
+ストリート: ${street}
 
 【テーブル状況】
 ${tableCtx}
 
-【ハンド情報】
-- Heroのハンド: ${hand}
-- Heroのスタック: ${stack||'不明'}BB
-- ストリート: ${street}
-- ポットサイズ: ${pot||'不明'}BB
-${board?`- ボード: ${board}`:''}
-
 【アクション経緯】
 ${action}
 
-【評価してほしいポイント】
-${question||'全体的な判断を評価してください'}
+${question?'【評価してほしいポイント】\n'+question:''}
 
-【評価形式】
 以下の形式で回答してください：
 
 評価: [★★★★★ / ★★★★☆ / ★★★☆☆ / ★★☆☆☆ / ★☆☆☆☆]
@@ -2733,19 +2734,18 @@ ${question||'全体的な判断を評価してください'}
 [200文字程度で、対戦相手のプロフィールを考慮した具体的なフィードバック。良い点・改善点・代替ライン（もしあれば）を含めてください。]`;
 
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    const res=await fetch('/api/evaluate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:1000,
+        system:'あなたはテキサスホールデムのプロコーチです。日本語で簡潔に回答してください。',
         messages:[{role:'user',content:prompt}]
       })
     });
+
     const data=await res.json();
     const text=data.content?.[0]?.text||'評価に失敗しました';
 
-    // Parse rating
     const ratingMatch=text.match(/評価[:：]\s*([★☆]+)/);
     const onelineMatch=text.match(/一言[:：]\s*(.+)/);
     const commentMatch=text.match(/詳細コメント[:：]?\s*\n([\s\S]+)/);
@@ -2754,20 +2754,20 @@ ${question||'全体的な判断を評価してください'}
     const oneline=onelineMatch?onelineMatch[1].trim():'';
     const comment=commentMatch?commentMatch[1].trim():text;
 
-    // Stars color based on count
     const starCount=(rating.match(/★/g)||[]).length;
-    const starColor=starCount>=4?'#4ade80':starCount===3?'#FBBF24':starCount<=2?'#f87171':'#FBBF24';
+    const starColor=starCount>=4?'#4ade80':starCount===3?'#FBBF24':'#f87171';
 
+    document.getElementById('eval-result').style.display='block';
     document.getElementById('eval-rating').innerHTML=
       `<span style="font-size:24px">${rating}</span>`+
-      `<div><div style="font-size:13px;font-weight:700;color:${starColor}">${oneline}</div></div>`;
+      `<div style="font-size:13px;font-weight:700;color:${starColor};margin-top:4px">${oneline}</div>`;
     document.getElementById('eval-comment').textContent=comment;
-    document.getElementById('eval-result').style.display='block';
+
   }catch(e){
-    document.getElementById('eval-comment').textContent='エラーが発生しました。再試行してください。';
     document.getElementById('eval-result').style.display='block';
+    document.getElementById('eval-comment').textContent='エラーが発生しました。再試行してください。';
   }finally{
-    btn.textContent='🤖 AIに評価してもらう';btn.disabled=false;btn.style.opacity='1';
+    btn.textContent='AIに評価してもらう';btn.disabled=false;btn.style.opacity='1';
   }
 }
 
@@ -3206,4 +3206,3 @@ function renderAll(){
 
 renderAll();
 </script>
-
