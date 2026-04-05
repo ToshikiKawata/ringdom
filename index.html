@@ -1121,21 +1121,12 @@ function renderTable(){
     const t=document.createElementNS(NS,'text');
     t.setAttribute('x',x);t.setAttribute('y',pname&&!isHero?y-1.5:y+1.5);
     t.setAttribute('text-anchor','middle');
-    t.setAttribute('font-size',isHero?'4':'4.5');
+    t.setAttribute('font-size','4.5');
     t.setAttribute('fill',isHero?'#0a1a0a':'#90b890');
     t.setAttribute('font-weight','bold');t.setAttribute('font-family','monospace');
     t.textContent=p[i];
     if(!isHero){t.style.cursor='pointer';}
     g.appendChild(t);
-
-    // Hero表示: "YOU"テキスト
-    if(isHero){
-      const youT=document.createElementNS(NS,'text');
-      youT.setAttribute('x',x);youT.setAttribute('y',y+3.5);
-      youT.setAttribute('text-anchor','middle');youT.setAttribute('font-size','3');
-      youT.setAttribute('fill','#0a1a0a');youT.setAttribute('font-weight','700');
-      youT.textContent='YOU';g.appendChild(youT);
-    }
 
     // プレイヤー名
     if(pname&&!isHero){
@@ -2397,6 +2388,13 @@ function getActivePlayers(){
 }
 
 // ポストフロップのアクション順（SBから時計回り）
+// プリフロップのアクション順（UTGから時計回り、BBが最後）
+function preflopOrder(){
+  const allPos=pos();
+  const order=['UTG','UTG+1','MP','MP+1','HJ','CO','BTN','SB','BB'];
+  return order.filter(p=>allPos.includes(p));
+}
+
 function postFlopOrder(){
   const allPos=pos();
   // SB→BB→UTG...→BTN の順
@@ -2407,7 +2405,6 @@ function postFlopOrder(){
 // 現ストリートでまだアクションしていないアクティブプレイヤー取得
 function getUnarctedThisStreet(){
   const active=new Set(getActivePlayers());
-  // 現ストリートのdivider以降のアクションを取得
   let inCurrent=false;
   const actedThisStreet=new Set();
   for(const e of actionLog){
@@ -2417,18 +2414,44 @@ function getUnarctedThisStreet(){
   return [...active].filter(p=>!actedThisStreet.has(p));
 }
 
-// アクション追加時に自動フォールドを挿入
-// プリフロップ以外で、現在のプレイヤーより前に行動すべきだったプレイヤーを自動フォールド
 function getAutoFolds(currentPlayer){
+  const order=currentStreet==='preflop'?preflopOrder():postFlopOrder();
+  const curIdx=order.indexOf(currentPlayer);
+  if(curIdx<0) return [];
+
+  if(currentStreet==='preflop'){
+    const unacted=getUnarctedThisStreet();
+    return order.slice(0,curIdx).filter(p=>unacted.includes(p));
+  }
+
+  // ポストフロップ：ベットがある場合、チェック済みも含めて「再アクション必要」
+  const acts=getStreetActions();
+  const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
+  if(!hasAggressive) return []; // ベットなし→チェックに任せる
+
+  // ベットがある場合：ベット以降にまだアクションしていないプレイヤーを自動フォールド
+  // ベットのインデックスを探す
+  let betIdx=-1;
+  for(let i=acts.length-1;i>=0;i--){
+    if(['bet','raise','3bet'].includes(acts[i].action)){betIdx=i;break;}
+  }
+  const actedAfterBet=new Set(acts.slice(betIdx+1).map(e=>e.player));
+  const active=new Set(getActivePlayers());
+
+  // currentPlayerより前の順番で、ベット後にまだアクションしていないアクティブプレイヤー
+  return order.slice(0,curIdx).filter(p=>active.has(p)&&!actedAfterBet.has(p)&&p!==acts[betIdx]?.player);
+}
+
+function getAutoChecks(currentPlayer){
   if(currentStreet==='preflop') return [];
+  const acts=getStreetActions();
+  const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
+  if(hasAggressive) return [];
   const order=postFlopOrder();
   const unacted=getUnarctedThisStreet();
   const curIdx=order.indexOf(currentPlayer);
   if(curIdx<0) return [];
-  // currentPlayerより前の順番でまだ行動していないアクティブプレイヤー
-  return order
-    .slice(0,curIdx)
-    .filter(p=>unacted.includes(p));
+  return order.slice(0,curIdx).filter(p=>unacted.includes(p));
 }
 
 function renderAbPlayerSelect(){
@@ -2454,9 +2477,14 @@ function renderAbPlayerSelect(){
 
 function addStreetDivider(street){
   const existing=actionLog.filter(e=>e.type==='street').map(e=>e.street);
-  // 既にある場合は無視
   if(existing.includes(street)) return;
-  // 追加（自動補完なし・順番は次のストリートのみ許可する）
+
+  // 現ストリートでまだアクションしていないプレイヤーを自動フォールド
+  const unacted=getUnarctedThisStreet();
+  unacted.forEach(p=>{
+    actionLog.push({type:'action',player:p,action:'fold',size:'',auto:true});
+  });
+
   currentStreet=street;
   actionLog.push({type:'street',street,label:STREET_LABELS[street]});
   updateStreetBtns();
@@ -2585,9 +2613,15 @@ function addAction(){
   const size=sizeEl?.value||'';
   const needsSize=action==='bet'||action==='raise'||action==='3bet';
 
-  // 自動フォールド：このプレイヤーより前にアクションすべきだった人を自動フォールド
+  // 自動挿入: 前にアクションすべきプレイヤーを補完
+  const autoChecks=getAutoChecks(player);
+  autoChecks.forEach(p=>{
+    actionLog.push({type:'action',player:p,action:'check',size:'',auto:true});
+  });
   const autoFolds=getAutoFolds(player);
-  autoFolds.forEach(p=>{
+  // ポストフロップでautoChecksがある場合はfoldしない（チェック済み）
+  const foldTargets=autoFolds.filter(p=>!autoChecks.includes(p));
+  foldTargets.forEach(p=>{
     actionLog.push({type:'action',player:p,action:'fold',size:'',auto:true});
   });
 
@@ -2624,10 +2658,10 @@ function renderActionLog(){
     const aColor=ACTION_COLORS[e.action]||'#e2f0e2';
     const sizeStr=e.size?` <span style="color:#FBBF24">${e.size}bb</span>`:'';
     const autoTag=e.auto?`<span style="font-size:9px;color:#475569;margin-left:4px">AUTO</span>`:'';
+    const pIdx=pos().indexOf(e.player);
+    const pname=pIdx>=0?(state.seatProfiles[pIdx]?.name||''):'';
+    const displayName=isHero?'Hero':pname?(e.player+'('+pname+')'):e.player;
     return`<div class="action-entry action-row" style="${e.auto?'opacity:0.6':''}">
-      const pIdx=pos().indexOf(e.player);
-      const pname=pIdx>=0?(state.seatProfiles[pIdx]?.name||''):'';
-      const displayName=isHero?'★ Hero':pname?(e.player+'('+pname+')'):e.player;
       <span style="color:${isHero?'var(--gold)':'var(--text-dim)'};font-weight:700;min-width:52px">${displayName}</span>
       <span style="color:${aColor};font-weight:700">${aLabel}</span>${sizeStr}${autoTag}
       <button class="action-del" onclick="deleteAction(${i})">✕</button>
@@ -3331,6 +3365,7 @@ document.addEventListener('touchstart', e=>{
 
 function renderAll(){
   renderTable();renderHeroBar();renderSeatList();renderPosBtns();renderLogPosBtns();updateExploitButton();
+  renderAbHeroPosBtns();renderAbPlayerSelect();
   if(state.currentTab==='range')renderMatrix();
 }
 
