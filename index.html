@@ -379,7 +379,7 @@ button:active{transform:scale(0.94);opacity:0.85}
       <button id="sc-rfi"    onclick="setScenario('RFI')"     style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:1px solid var(--gold)">RFI</button>
       <button id="sc-3bep"  onclick="setScenario('3BET_EP')" style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#818CF8;border:1px solid #3a3060">3B vs EP</button>
       <button id="sc-3blp"  onclick="setScenario('3BET_LP')" style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#F97316;border:1px solid #5c2a0a">3B vs LP</button>
-      <button id="sc-bbdef" onclick="setScenario('BB_DEF')"  style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#60A5FA;border:1px solid #1e3a5f">BB守備</button>
+      <button id="sc-bbdef" onclick="setScenario('BB_DEF')"  style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#60A5FA;border:1px solid #1e3a5f;display:none">BB守備</button>
     </div>
     <!-- BB Defense villain position selector -->
     <div id="bb-villain-row" style="display:none;margin-bottom:8px">
@@ -1582,20 +1582,14 @@ function updateScenarioBtns(){
     if(!btn) return;
     const isValid=valid.includes(sc);
     const active=sc===state.scenario;
-    // BBのときはBB_DEFのみ表示、他を隠す
-    // BB以外のときはBB_DEFを隠す
     const show=isBB?(sc==='BB_DEF'):sc!=='BB_DEF';
-    btn.style.display=show?'':'none';
-    if(!isValid||!show){
-      btn.style.background='transparent';btn.style.color='#2a3a2a';
-      btn.style.borderColor='#1a2a1a';btn.style.opacity='0.4';btn.style.cursor='not-allowed';
-    } else {
-      btn.style.display='';
-      btn.style.opacity='1';btn.style.cursor='pointer';
-      btn.style.background=active?cfg.bg:'transparent';
-      btn.style.color=active?cfg.color:cfg.inactiveColor;
-      btn.style.borderColor=active?cfg.border:cfg.inactiveBorder;
-    }
+    const shouldShow=show&&isValid;
+    btn.style.display=shouldShow?'':'none';
+    if(!shouldShow) return;
+    btn.style.opacity='1';btn.style.cursor='pointer';
+    btn.style.background=active?cfg.bg:'transparent';
+    btn.style.color=active?cfg.color:cfg.inactiveColor;
+    btn.style.borderColor=active?cfg.border:cfg.inactiveBorder;
   });
   const isBBDef=state.scenario==='BB_DEF';
   const bbRow=document.getElementById('bb-villain-row');
