@@ -1569,28 +1569,38 @@ function setScenario(s){
 function updateScenarioBtns(){
   const hp=heroPos();
   const valid=validScenariosFor(hp);
-  const isBB=hp==='BB';
-  const configs={
-    'RFI':    {id:'sc-rfi',  bg:'var(--gold)',color:'#0a1a0a',border:'var(--gold)',    inactiveColor:'#818060',inactiveBorder:'#5a5a20'},
-    '3BET_EP':{id:'sc-3bep',bg:'#818CF8',    color:'#0a1a0a',border:'#818CF8',        inactiveColor:'#818CF8',inactiveBorder:'#3a3060'},
-    '3BET_LP':{id:'sc-3blp',bg:'#F97316',    color:'#0a1a0a',border:'#F97316',        inactiveColor:'#F97316',inactiveBorder:'#5c2a0a'},
-    'BB_DEF': {id:'sc-bbdef',bg:'#60A5FA',   color:'#0a1a0a',border:'#60A5FA',        inactiveColor:'#60A5FA',inactiveBorder:'#1e3a5f'},
+
+  // 各シナリオのボタンを明示的に制御
+  const allScenarios={
+    'RFI':    'sc-rfi',
+    '3BET_EP':'sc-3bep',
+    '3BET_LP':'sc-3blp',
+    'BB_DEF': 'sc-bbdef',
   };
-  ['RFI','3BET_EP','3BET_LP','BB_DEF'].forEach(sc=>{
-    const cfg=configs[sc];
-    const btn=document.getElementById(cfg.id);
+  const configs={
+    'RFI':    {bg:'var(--gold)',color:'#0a1a0a',border:'var(--gold)',    inactiveColor:'#818060',inactiveBorder:'#5a5a20'},
+    '3BET_EP':{bg:'#818CF8',   color:'#0a1a0a',border:'#818CF8',        inactiveColor:'#818CF8',inactiveBorder:'#3a3060'},
+    '3BET_LP':{bg:'#F97316',   color:'#0a1a0a',border:'#F97316',        inactiveColor:'#F97316',inactiveBorder:'#5c2a0a'},
+    'BB_DEF': {bg:'#60A5FA',   color:'#0a1a0a',border:'#60A5FA',        inactiveColor:'#60A5FA',inactiveBorder:'#1e3a5f'},
+  };
+
+  Object.entries(allScenarios).forEach(([sc,id])=>{
+    const btn=document.getElementById(id);
     if(!btn) return;
     const isValid=valid.includes(sc);
+    // isValidでないボタンは完全非表示
+    if(!isValid){ btn.style.display='none'; return; }
+    // 有効なボタンは表示
+    btn.style.display='';
+    const cfg=configs[sc];
     const active=sc===state.scenario;
-    const show=isBB?(sc==='BB_DEF'):sc!=='BB_DEF';
-    const shouldShow=show&&isValid;
-    btn.style.display=shouldShow?'':'none';
-    if(!shouldShow) return;
-    btn.style.opacity='1';btn.style.cursor='pointer';
+    btn.style.opacity='1';
+    btn.style.cursor='pointer';
     btn.style.background=active?cfg.bg:'transparent';
     btn.style.color=active?cfg.color:cfg.inactiveColor;
     btn.style.borderColor=active?cfg.border:cfg.inactiveBorder;
   });
+
   const isBBDef=state.scenario==='BB_DEF';
   const bbRow=document.getElementById('bb-villain-row');
   if(bbRow) bbRow.style.display=isBBDef?'block':'none';
