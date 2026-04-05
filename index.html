@@ -1553,7 +1553,8 @@ function renderPosBtns(){
 function validScenariosFor(hp){
   if(hp==='BB') return['BB_DEF'];
   if(hp==='SB') return['RFI'];
-  if(hp==='UTG'||hp==='UTG+1') return['RFI'];
+  if(hp==='UTG') return['RFI'];
+  if(hp==='UTG+1') return['RFI','3BET_EP']; // UTGのオープンに3-BET可能
   return['RFI','3BET_EP','3BET_LP'];
 }
 
