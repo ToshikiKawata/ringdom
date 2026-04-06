@@ -2963,7 +2963,9 @@ ${question?'質問: '+question:''}
       })
     });
 
-    const data=await res.json();
+    const rawText=await res.text();
+    alert('STATUS:'+res.status+'\n'+rawText.slice(0,200));
+    const data=JSON.parse(rawText);
 
     // エラーレスポンスの確認
     if(!res.ok||data.error){
