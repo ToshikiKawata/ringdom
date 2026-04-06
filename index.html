@@ -2935,39 +2935,30 @@ async function evaluatePlay(){
   const btn=document.getElementById('eval-btn');
   btn.textContent='評価中...';btn.disabled=true;btn.style.opacity='0.6';
 
-  // テーブル状況をプロンプトに含める
   const tableCtx=buildTableContext();
 
-  const prompt=`あなたはプロのポーカーコーチです。以下のハンドを評価してください。
+  // 短縮プロンプト（高速化）
+  const prompt=`ポーカーコーチとして評価。
 
-【ハンド情報】
-ヒーローのハンド: ${hand}
-ボード: ${board}
-スタック: ${stack}
-ストリート: ${street}
-
-【テーブル状況】
+手: ${hand}${board?' ボード:'+board:''}
+スタック: ${stack} ストリート: ${street}
 ${tableCtx}
+アクション: ${action}
+${question?'質問: '+question:''}
 
-【アクション経緯】
-${action}
-
-${question?'【評価してほしいポイント】\n'+question:''}
-
-以下の形式で回答してください：
-
-評価: [★★★★★ / ★★★★☆ / ★★★☆☆ / ★★☆☆☆ / ★☆☆☆☆]
-一言: [10文字以内の核心]
-
-詳細コメント:
-[200文字程度で、対戦相手のプロフィールを考慮した具体的なフィードバック。良い点・改善点・代替ライン（もしあれば）を含めてください。]`;
+以下の形式のみで回答:
+評価: ★X
+一言: 10文字以内
+コメント: 100文字以内`;
 
   try{
     const res=await fetch('/api/evaluate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
-        system:'あなたはテキサスホールデムのプロコーチです。日本語で簡潔に回答してください。',
+        model:'claude-haiku-4-5-20251001',
+        max_tokens:400,
+        system:'テキサスホールデムのプロコーチ。日本語で簡潔に。',
         messages:[{role:'user',content:prompt}]
       })
     });
