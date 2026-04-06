@@ -1,4 +1,5 @@
 <meta charset="UTF-8">
+<!-- RINGDOM v2.1.0 -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -374,13 +375,8 @@ button:active{transform:scale(0.94);opacity:0.85}
         <button id="ss-200" onclick="setStackSize(200)" class="ss-btn">200BB</button>
       </div>
     </div>
-    <!-- Scenario selector -->
-    <div style="display:flex;gap:4px;margin-bottom:6px">
-      <button id="sc-rfi"    onclick="setScenario('RFI')"     style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:1px solid var(--gold)">RFI</button>
-      <button id="sc-3bep"  onclick="setScenario('3BET_EP')" style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#818CF8;border:1px solid #3a3060">3B vs EP</button>
-      <button id="sc-3blp"  onclick="setScenario('3BET_LP')" style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#F97316;border:1px solid #5c2a0a">3B vs LP</button>
-      <button id="sc-bbdef" onclick="setScenario('BB_DEF')"  style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#60A5FA;border:1px solid #1e3a5f;display:none">BB守備</button>
-    </div>
+    <!-- Scenario selector - rendered dynamically by JS -->
+    <div id="scenario-btn-row" style="display:flex;gap:4px;margin-bottom:6px"></div>
     <!-- BB Defense villain position selector -->
     <div id="bb-villain-row" style="display:none;margin-bottom:8px">
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:5px">相手のオープンポジション</div>
@@ -504,8 +500,8 @@ button:active{transform:scale(0.94);opacity:0.85}
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">評価してほしいポイント</div>
       <textarea id="log-question" rows="2" placeholder="例: 3betは正しかった？ベットサイズは？" style="width:100%;padding:8px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;outline:none;resize:none;line-height:1.5"></textarea>
     </div>
-    <button onclick="evaluatePlay()" id="eval-btn" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:none;margin-bottom:14px">
-      AIに評価してもらう
+    <button onclick="evaluatePlay()" id="eval-btn" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#2a3a2a;color:#5a7a5a;border:none;margin-bottom:14px">
+      AIに評価してもらう（ハンドとアクションを入力してください）
     </button>
     <div id="eval-result" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px">
       <div style="font-size:9px;color:var(--gold);letter-spacing:1.5px;margin-bottom:10px">AI評価</div>
@@ -1544,63 +1540,27 @@ function renderPosBtns(){
     const border=isHero?'var(--gold)':'var(--border2)';
     return`<button onclick="setHeroFromRange(${i})" style="padding:5px 10px;border-radius:4px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0;background:${bg};color:${color};border:1px solid ${border}">${isHero?'★ ':''} ${seat}</button>`;
   }).join('');
-  // シナリオが現在のポジションで有効か確認、無効なら先頭有効シナリオにリセット
+
   const valid=validScenariosFor(heroPos());
   if(!valid.includes(state.scenario)) state.scenario=valid[0];
-  updateScenarioBtns();
-}
 
-function validScenariosFor(hp){
-  if(hp==='BB') return['BB_DEF'];
-  if(hp==='SB') return['RFI'];
-  if(hp==='UTG') return['RFI'];
-  if(hp==='UTG+1') return['RFI','3BET_EP']; // UTGのオープンに3-BET可能
-  return['RFI','3BET_EP','3BET_LP'];
-}
-
-function setScenario(s){
-  const hp=heroPos();
-  const valid=validScenariosFor(hp);
-  if(!valid.includes(s)) return;
-  state.scenario=s;
-  updateScenarioBtns();
-  renderAll();
-}
-
-function updateScenarioBtns(){
-  const hp=heroPos();
-  const valid=validScenariosFor(hp);
-
-  // 各シナリオのボタンを明示的に制御
-  const allScenarios={
-    'RFI':    'sc-rfi',
-    '3BET_EP':'sc-3bep',
-    '3BET_LP':'sc-3blp',
-    'BB_DEF': 'sc-bbdef',
-  };
-  const configs={
-    'RFI':    {bg:'var(--gold)',color:'#0a1a0a',border:'var(--gold)',    inactiveColor:'#818060',inactiveBorder:'#5a5a20'},
-    '3BET_EP':{bg:'#818CF8',   color:'#0a1a0a',border:'#818CF8',        inactiveColor:'#818CF8',inactiveBorder:'#3a3060'},
-    '3BET_LP':{bg:'#F97316',   color:'#0a1a0a',border:'#F97316',        inactiveColor:'#F97316',inactiveBorder:'#5c2a0a'},
-    'BB_DEF': {bg:'#60A5FA',   color:'#0a1a0a',border:'#60A5FA',        inactiveColor:'#60A5FA',inactiveBorder:'#1e3a5f'},
-  };
-
-  Object.entries(allScenarios).forEach(([sc,id])=>{
-    const btn=document.getElementById(id);
-    if(!btn) return;
-    const isValid=valid.includes(sc);
-    // isValidでないボタンは完全非表示
-    if(!isValid){ btn.style.display='none'; return; }
-    // 有効なボタンは表示
-    btn.style.display='';
-    const cfg=configs[sc];
-    const active=sc===state.scenario;
-    btn.style.opacity='1';
-    btn.style.cursor='pointer';
-    btn.style.background=active?cfg.bg:'transparent';
-    btn.style.color=active?cfg.color:cfg.inactiveColor;
-    btn.style.borderColor=active?cfg.border:cfg.inactiveBorder;
-  });
+  // シナリオボタンを直接レンダリング
+  const defs=[
+    {sc:'RFI',    label:'RFI',      bg:'var(--gold)',color:'#0a1a0a',inC:'#818060',bd:'var(--gold)',inB:'#5a5a20'},
+    {sc:'3BET_EP',label:'3B vs EP', bg:'#818CF8',   color:'#0a1a0a',inC:'#818CF8',bd:'#818CF8',   inB:'#3a3060'},
+    {sc:'3BET_LP',label:'3B vs LP', bg:'#F97316',   color:'#0a1a0a',inC:'#F97316',bd:'#F97316',   inB:'#5c2a0a'},
+    {sc:'BB_DEF', label:'BB守備',   bg:'#60A5FA',   color:'#0a1a0a',inC:'#60A5FA',bd:'#60A5FA',   inB:'#1e3a5f'},
+  ];
+  const row=document.getElementById('scenario-btn-row');
+  if(row){
+    row.innerHTML=defs.filter(d=>valid.includes(d.sc)).map(d=>{
+      const active=d.sc===state.scenario;
+      return`<button onclick="setScenario('${d.sc}')"
+        style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;
+        background:${active?d.bg:'transparent'};color:${active?d.color:d.inC};border:1px solid ${active?d.bd:d.inB}">
+        ${d.label}</button>`;
+    }).join('');
+  }
 
   const isBBDef=state.scenario==='BB_DEF';
   const bbRow=document.getElementById('bb-villain-row');
@@ -1610,6 +1570,52 @@ function updateScenarioBtns(){
   const lgBb=document.getElementById('legend-bbdef');
   if(lgRfi) lgRfi.style.display=isBBDef?'none':'flex';
   if(lgBb)  lgBb.style.display=isBBDef?'flex':'none';
+}
+
+function validScenariosFor(hp){
+  if(hp==='BB') return['BB_DEF'];
+  if(hp==='UTG') return['RFI'];
+  if(hp==='UTG+1') return['RFI','3BET_EP'];
+  if(hp==='SB') return['RFI','3BET_EP','3BET_LP'];
+  return['RFI','3BET_EP','3BET_LP'];
+}
+
+function setScenario(s){
+  const hp=heroPos();
+  const valid=validScenariosFor(hp);
+  if(!valid.includes(s)) return;
+  state.scenario=s;
+  // シナリオボタンのみ再描画（renderAllを呼ぶとシナリオがリセットされる可能性があるため）
+  const defs=[
+    {sc:'RFI',    label:'RFI',      bg:'var(--gold)',color:'#0a1a0a',inC:'#818060',bd:'var(--gold)',inB:'#5a5a20'},
+    {sc:'3BET_EP',label:'3B vs EP', bg:'#818CF8',   color:'#0a1a0a',inC:'#818CF8',bd:'#818CF8',   inB:'#3a3060'},
+    {sc:'3BET_LP',label:'3B vs LP', bg:'#F97316',   color:'#0a1a0a',inC:'#F97316',bd:'#F97316',   inB:'#5c2a0a'},
+    {sc:'BB_DEF', label:'BB守備',   bg:'#60A5FA',   color:'#0a1a0a',inC:'#60A5FA',bd:'#60A5FA',   inB:'#1e3a5f'},
+  ];
+  const row=document.getElementById('scenario-btn-row');
+  if(row){
+    row.innerHTML=defs.filter(d=>valid.includes(d.sc)).map(d=>{
+      const active=d.sc===state.scenario;
+      return`<button onclick="setScenario('${d.sc}')"
+        style="flex:1;padding:6px 2px;border-radius:6px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;
+        background:${active?d.bg:'transparent'};color:${active?d.color:d.inC};border:1px solid ${active?d.bd:d.inB}">
+        ${d.label}</button>`;
+    }).join('');
+  }
+  const isBBDef=s==='BB_DEF';
+  const bbRow=document.getElementById('bb-villain-row');
+  if(bbRow) bbRow.style.display=isBBDef?'block':'none';
+  if(isBBDef) renderBBVillainBtns();
+  const lgRfi=document.getElementById('legend-rfi');
+  const lgBb=document.getElementById('legend-bbdef');
+  if(lgRfi) lgRfi.style.display=isBBDef?'none':'flex';
+  if(lgBb)  lgBb.style.display=isBBDef?'flex':'none';
+  renderHeroBar();
+  renderMatrix();
+}
+
+function updateScenarioBtns(){
+  renderPosBtns();
 }
 function renderBBVillainBtns(){
   const p=pos().filter(seat=>seat!=='BB'&&seat!=='SB'||true); // show all except BB
@@ -1827,6 +1833,30 @@ function updateScenarioBtns(){
   if(lgBb)  lgBb.style.display=isBBDef?'flex':'none';
 }
 
+function classifyHand(key){
+  const suited=key.endsWith('s'),offsuit=key.endsWith('o'),pair=!suited&&!offsuit;
+  const r1=key[0],r2=pair?key[0]:(suited||offsuit)?key[1]:key[1];
+  const rankVal={'A':14,'K':13,'Q':12,'J':11,'T':10,'9':9,'8':8,'7':7,'6':6,'5':5,'4':4,'3':3,'2':2};
+  const v1=rankVal[r1]||0, v2=rankVal[r2]||0;
+  const gap=Math.abs(v1-v2);
+
+  // バリューハンド（プレミアム）
+  if(pair&&v1>=11) return{label:'プレミアムペア',desc:'常にレイズ。ポットを大きくすることで期待値最大化。',color:'#4ade80'};
+  if(pair&&v1>=8) return{label:'ミドルペア',desc:'バリューレイズ。セット率約12%でインプライドオッズも高い。',color:'#86efac'};
+  if(pair&&v1>=2) return{label:'スモールペア',desc:'セット率12%。コーラーが多いほどインプライドオッズ向上。',color:'#a3e635'};
+
+  if(!pair&&v1>=13&&v2>=13) return{label:'プレミアムハンド',desc:'最強のバリューハンド。ポーラーレンジの核心。フォールドなし。',color:'#4ade80'};
+  if(!pair&&v1===14&&v2>=11) return{label:'強いエースハンド',desc:'バリュー主体。ツーペアやトップペアを形成しやすい。',color:'#4ade80'};
+  if(!pair&&v1===14&&v2>=5&&suited) return{label:'ナッツブラフ候補',desc:'ナッツフラッシュドロー＋エースブロッカー。GTOブラフの代表。バリューレンジとのバランスに必須。',color:'#818CF8'};
+  if(!pair&&v1===14&&v2>=2&&suited) return{label:'スーテッドエース（ブラフ）',desc:'フラッシュドロー＋エースブロッカーが価値の源泉。フォールドエクイティを高める。',color:'#818CF8'};
+  if(!pair&&v1>=12&&v2>=10) return{label:'ブロードウェイ',desc:'ツーペア・ストレート到達が高い。バリューとして機能。',color:'#86efac'};
+  if(!pair&&v1>=10&&v2>=8&&suited&&gap<=1) return{label:'スーテッドコネクター（上位）',desc:'フラッシュ・ストレートの両方を狙えるブラフ候補。ポーラーレンジのブラフ要素として優秀。',color:'#818CF8'};
+  if(!pair&&suited&&gap<=2&&v1<=9) return{label:'スーテッドコネクター',desc:'フラッシュドロー・ストレートドロー両方を持つ投機的ハンド。ポットが大きいほど価値増。',color:'#a78bfa'};
+  if(!pair&&suited&&gap<=4&&v1<=9) return{label:'スーテッドギャッパー',desc:'フラッシュ価値あり。コーラーが多い環境でインプライドオッズが上昇。',color:'#c4b5fd'};
+  if(!pair&&v1>=12&&v2>=10&&!suited) return{label:'オフスートブロードウェイ',desc:'ツーペア形成力は高いがスーテッドより価値低め。位置とスタックで判断。',color:'#fbbf24'};
+  return{label:'マージナルハンド',desc:'状況依存。エクスプロイト補正・ポジション・スタックで価値が変わる。',color:'#94A3B8'};
+}
+
 function showHandDetail(key,freq,baseFreq){
   const raise=freq;
   const fold=Math.max(0,1-raise);
@@ -1837,17 +1867,20 @@ function showHandDetail(key,freq,baseFreq){
   const typeLabel=pair?'ポケットペア':suited?'スーテッド':'オフスート';
   const combos=pair?6:suited?4:12;
 
+  // Hand classification
+  const cls=classifyHand(key);
+
   // Action label
   let actionLabel,actionColor;
   if(raise>=0.95){actionLabel='レイズ 100%';actionColor='#16a34a';}
   else if(raise>=0.50){actionLabel=`ミックス (${Math.round(raise*100)}% レイズ)`;actionColor='#ca8a04';}
-  else if(raise>=0.10){actionLabel=`ブラフ域 (${Math.round(raise*100)}% レイズ)`;actionColor='#b45309';}
+  else if(raise>=0.10){actionLabel=`低頻度レイズ (${Math.round(raise*100)}%)`;actionColor='#b45309';}
   else{actionLabel='フォールド';actionColor='#4a4a4a';}
 
   document.getElementById('hm-hand').textContent=key;
   document.getElementById('hm-type').textContent=typeLabel+' · '+combos+'コンボ';
 
-  // Visual bar using div split
+  // Visual bar
   const rPct=Math.round(raise*100);
   const fPct=100-rPct;
   let barInner='';
@@ -1863,7 +1896,7 @@ function showHandDetail(key,freq,baseFreq){
   document.getElementById('hm-bar').innerHTML=barInner;
 
   const barLabels=raise>=0.10&&raise<0.95
-    ?`<span>${raise>=0.50?'レイズ':'ブラフ'} ${rPct}%</span><span>フォールド ${fPct}%</span>`
+    ?`<span>${raise>=0.50?'レイズ':'低頻度'} ${rPct}%</span><span>フォールド ${fPct}%</span>`
     :`<span>${raise>=0.95?'レイズ 100%':'フォールド 100%'}</span>`;
   document.getElementById('hm-bar-labels').innerHTML=barLabels;
 
@@ -1888,19 +1921,27 @@ function showHandDetail(key,freq,baseFreq){
       <div style="font-size:18px;font-weight:700;color:${delta>0.01?'#4ade80':delta<-0.01?'#f87171':'var(--text)'}">${Math.round(freq*100)}% ${Math.abs(delta)>0.01?'('+adjSign+Math.round(delta*100)+'%)':''}</div>
     </div>`;
 
+  // Hand classification card
+  const adjEl=document.getElementById('hm-adj');
+  let adjHTML=`<div style="background:#0d1f2a;border:1px solid ${cls.color}44;border-radius:10px;padding:12px;margin-bottom:8px">
+    <div style="font-size:9px;color:${cls.color};letter-spacing:1.5px;font-weight:700;margin-bottom:6px">ハンド分類</div>
+    <div style="font-size:13px;font-weight:700;color:${cls.color};margin-bottom:6px">${cls.label}</div>
+    <div style="font-size:11px;color:#a0c0b0;line-height:1.7">${cls.desc}</div>
+  </div>`;
+
   // Adjustment detail
   const{adj}=computeAdj();
-  const adjEl=document.getElementById('hm-adj');
   if(adj.length>0&&Math.abs(delta)>0.01){
-    adjEl.style.display='block';
-    adjEl.innerHTML='<div style="color:var(--green-accent);font-size:9px;letter-spacing:1px;margin-bottom:4px">⚡ 補正要因</div>'+
+    adjHTML+=`<div style="background:var(--surface3);border-radius:8px;padding:10px">
+      <div style="color:var(--green-accent);font-size:9px;letter-spacing:1px;margin-bottom:6px">エクスプロイト補正</div>`+
       adj.map(a=>{
         const pct=((a.mult-1)*100).toFixed(0);
-        return`<div style="color:${a.color}">${a.reason} <span style="color:${a.mult>1?'#4ade80':'#f87171'}">(${a.mult>1?'+':''}${pct}%)</span></div>`;
-      }).join('');
-  } else {adjEl.style.display='none';}
+        return`<div style="font-size:11px;color:${a.color};margin-bottom:3px">${a.reason} <span style="color:${a.mult>1?'#4ade80':'#f87171'}">(${a.mult>1?'+':''}${pct}%)</span></div>`;
+      }).join('')+`</div>`;
+  }
+  adjEl.style.display='block';
+  adjEl.innerHTML=adjHTML;
 
-  // Show modal
   const ov=document.getElementById('hand-modal-overlay');
   const mo=document.getElementById('hand-modal');
   ov.style.opacity='1';ov.style.pointerEvents='all';
@@ -2635,12 +2676,14 @@ function addAction(){
   renderAbPlayerSelect();
   renderActionSelect(document.getElementById('ab-player')?.value||'');
   renderActionLog();
+  updateEvalBtn();
 }
 
 function deleteAction(idx){
   actionLog.splice(idx,1);
-  renderAbPlayerSelect(); // 削除後に再計算
+  renderAbPlayerSelect();
   renderActionLog();
+  updateEvalBtn();
 }
 
 function clearActions(){
@@ -2648,6 +2691,7 @@ function clearActions(){
   currentStreet='preflop';
   updateStreetBtns();
   renderActionLog();
+  updateEvalBtn();
 }
 
 function renderActionLog(){
@@ -2840,10 +2884,20 @@ function renderVillainStacks(){
   else{ renderActionLog(); updateStreetBtns(); }
 }
 
+function updateEvalBtn(){
+  const btn=document.getElementById('eval-btn');
+  if(!btn) return;
+  const hasHand=heroCards.filter(Boolean).length===2;
+  const hasPreflopAction=actionLog.some(e=>e.type==='street')&&
+    actionLog.filter(e=>e.type==='action'&&!e.auto).length>0;
+  const ready=hasHand&&hasPreflopAction;
+  btn.style.background=ready?'var(--gold)':'#1a2a1a';
+  btn.style.color=ready?'#0a1a0a':'#4a6a4a';
+  btn.style.cursor=ready?'pointer':'default';
+  btn.textContent=ready?'AIに評価してもらう':'AIに評価してもらう（ハンドとアクションを入力してください）';
+}
 function buildTableContext(){
   const p=pos();
-  const lines=[];
-  lines.push(`テーブル: ${state.tableSize}max, Hero: ${heroPos()}, レーキ: ${state.rake}%`);
   p.forEach((seat,i)=>{
     if(i===state.heroIdx)return;
     const pro=profileOf(i);
@@ -2870,7 +2924,13 @@ async function evaluatePlay(){
   const street=currentStreet;
 
   if(heroCards.filter(Boolean).length<2){alert('ハンドを2枚選択してください');return;}
-  if(actionLog.filter(e=>e.type==='action').length===0){alert('アクションを1つ以上追加してください');return;}
+
+  // プリフロップのアクションが最低1つ必要
+  const preflopActions=actionLog.filter(e=>e.type==='action'&&!e.auto);
+  const hasStreet=actionLog.some(e=>e.type==='street');
+  if(!hasStreet||preflopActions.length===0){
+    alert('プリフロップのアクションを少なくとも1つ入力してください');return;
+  }
 
   const btn=document.getElementById('eval-btn');
   btn.textContent='評価中...';btn.disabled=true;btn.style.opacity='0.6';
@@ -2913,6 +2973,15 @@ ${question?'【評価してほしいポイント】\n'+question:''}
     });
 
     const data=await res.json();
+
+    // エラーレスポンスの確認
+    if(!res.ok||data.error){
+      const errMsg=data.error?.message||data.error||`HTTP ${res.status}`;
+      document.getElementById('eval-result').style.display='block';
+      document.getElementById('eval-comment').textContent=`APIエラー: ${errMsg}`;
+      return;
+    }
+
     const text=data.content?.[0]?.text||'評価に失敗しました';
 
     const ratingMatch=text.match(/評価[:：]\s*([★☆]+)/);
@@ -2934,7 +3003,7 @@ ${question?'【評価してほしいポイント】\n'+question:''}
 
   }catch(e){
     document.getElementById('eval-result').style.display='block';
-    document.getElementById('eval-comment').textContent='エラーが発生しました。再試行してください。';
+    document.getElementById('eval-comment').textContent=`接続エラー: ${e.message}`;
   }finally{
     btn.textContent='AIに評価してもらう';btn.disabled=false;btn.style.opacity='1';
   }
@@ -3139,6 +3208,7 @@ window.closeCardPicker=function(){
     const ov=document.getElementById('card-picker-overlay');
     ov.style.opacity='0';ov.style.pointerEvents='none';
     pickerMode=null;
+    updateEvalBtn();
   }
 };
 
@@ -3318,8 +3388,8 @@ document.addEventListener('touchstart', e=>{
   const TOTAL=3;
 
   function showOnboarding(){
-    // 開発中は毎回表示。リリース時は下記に変更:
-    // if(localStorage.getItem('ra_onboarded')) finishOnboarding(false);
+    // 初回のみ表示
+    if(localStorage.getItem('ra_onboarded')) { finishOnboarding(false); return; }
   }
 
   function obGoTo(n){
