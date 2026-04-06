@@ -2952,9 +2952,14 @@ ${question?'質問: '+question:''}
 コメント: 100文字以内`;
 
   try{
+    // 15秒でタイムアウト
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),15000);
+
     const res=await fetch('/api/evaluate',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
+      signal:controller.signal,
       body:JSON.stringify({
         model:'claude-haiku-4-5-20251001',
         max_tokens:400,
@@ -2962,9 +2967,10 @@ ${question?'質問: '+question:''}
         messages:[{role:'user',content:prompt}]
       })
     });
+    clearTimeout(timeout);
 
     const rawText=await res.text();
-    alert('STATUS:'+res.status+'\n'+rawText.slice(0,200));
+    alert('STATUS:'+res.status+'\n'+rawText.slice(0,300));
     const data=JSON.parse(rawText);
 
     // エラーレスポンスの確認
@@ -2996,7 +3002,8 @@ ${question?'質問: '+question:''}
 
   }catch(e){
     document.getElementById('eval-result').style.display='block';
-    document.getElementById('eval-comment').textContent=`接続エラー: ${e.message}`;
+    document.getElementById('eval-comment').textContent=
+      e.name==='AbortError'?'タイムアウト（15秒）: Edge Functionに到達できていません':`接続エラー: ${e.message}`;
   }finally{
     btn.textContent='AIに評価してもらう';btn.disabled=false;btn.style.opacity='1';
   }
