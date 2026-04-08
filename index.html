@@ -494,7 +494,7 @@ button:active{transform:scale(0.94);opacity:0.85}
           <span style="font-size:11px;color:var(--text-dim)">BB</span>
         </div>
       </div>
-      <button onclick="addAction()" style="width:100%;padding:11px;border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#16a34a;color:#fff;border:none">追加する</button>
+      <button id="add-action-btn" onclick="addAction()" style="width:100%;padding:11px;border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#16a34a;color:#fff;border:none">追加する</button>
     </div>
     <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:12px">
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">評価してほしいポイント</div>
@@ -2029,10 +2029,14 @@ function setTableSize(n){
   state.tableSize=n;
   state.seatProfiles={};
   closeSheet();
-  // 同じポジション名があれば保持、なければ0(BTN)
   const newIdx=POSITIONS_MAP[n].indexOf(currentPos);
   state.heroIdx=newIdx>=0?newIdx:0;
   document.querySelectorAll('.size-btn').forEach((b,i)=>{b.classList.toggle('active',[6,7,8,9][i]===n)});
+  // 人数変更でポジションが変わるためactionLogをリセット
+  if(actionLog.length>1){ // Preflop以外のアクションがある場合
+    actionLog=[{type:'street',street:'preflop',label:STREET_LABELS['preflop']}];
+    currentStreet='preflop';
+  }
   renderAll();
 }
 
@@ -2709,7 +2713,12 @@ function addAction(){
 
 function deleteAction(idx){
   actionLog.splice(idx,1);
+  // currentStreetを残っている最後のstreetに合わせる
+  const streets=actionLog.filter(e=>e.type==='street');
+  if(streets.length>0) currentStreet=streets[streets.length-1].street;
+  else currentStreet='preflop';
   renderAbPlayerSelect();
+  updateStreetBtns();
   renderActionLog();
   updateEvalBtn();
 }
@@ -2717,7 +2726,59 @@ function deleteAction(idx){
 function clearActions(){
   actionLog=[];
   currentStreet='preflop';
+  // Preflopを自動追加
+  actionLog.push({type:'street',street:'preflop',label:STREET_LABELS['preflop']});
   updateStreetBtns();
+  renderAbPlayerSelect();
+  renderActionLog();
+  updateEvalBtn();
+}
+
+function isStreetOver(){
+  // All-inがこのストリートにあれば終了
+  const acts=getStreetActions();
+  return acts.some(e=>e.action==='allin');
+}
+
+function addAction(){
+  const player=document.getElementById('ab-player')?.value||'';
+  const action=document.getElementById('ab-action')?.value||'';
+  if(!player||!action) return;
+
+  // All-in後は追加不可
+  if(isStreetOver()){
+    return;
+  }
+
+  // 同じプレイヤーが既にこのストリートでアクション済みかチェック
+  // （プリフロップは例外：レイズ後にBBが再アクションできる）
+  const acts=getStreetActions();
+  const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
+  const alreadyActed=acts.filter(e=>!e.auto).some(e=>e.player===player);
+  if(alreadyActed&&!hasAggressive&&currentStreet!=='preflop'){
+    // ポストフロップでベットなし、かつ既にアクション済み→追加不可
+    return;
+  }
+
+  const sizeEl=document.getElementById('ab-size');
+  const size=sizeEl?.value||'';
+  const needsSize=action==='bet'||action==='raise'||action==='3bet';
+
+  // 自動挿入
+  const autoChecks=getAutoChecks(player);
+  autoChecks.forEach(p=>{
+    actionLog.push({type:'action',player:p,action:'check',size:'',auto:true});
+  });
+  const autoFolds=getAutoFolds(player);
+  const foldTargets=autoFolds.filter(p=>!autoChecks.includes(p));
+  foldTargets.forEach(p=>{
+    actionLog.push({type:'action',player:p,action:'fold',size:'',auto:true});
+  });
+
+  actionLog.push({type:'action',player,action,size:needsSize?size:'',auto:false});
+  if(sizeEl) sizeEl.value='';
+  renderAbPlayerSelect();
+  renderActionSelect(document.getElementById('ab-player')?.value||'');
   renderActionLog();
   updateEvalBtn();
 }
@@ -2726,6 +2787,9 @@ function renderActionLog(){
   const container=document.getElementById('action-log');
   if(!container)return;
   if(actionLog.length===0){container.innerHTML='';return;}
+
+  const over=isStreetOver();
+
   container.innerHTML=actionLog.map((e,i)=>{
     if(e.type==='street'){
       return`<div class="action-entry street-div">${e.label}<button class="action-del" onclick="deleteAction(${i})">✕</button></div>`;
@@ -2744,6 +2808,19 @@ function renderActionLog(){
       <button class="action-del" onclick="deleteAction(${i})">✕</button>
     </div>`;
   }).join('');
+
+  // All-in後の警告＆追加ボタン非活性
+  const addBtn=document.getElementById('add-action-btn');
+  if(addBtn){
+    addBtn.disabled=over;
+    addBtn.style.opacity=over?'0.4':'1';
+    addBtn.style.cursor=over?'not-allowed':'pointer';
+  }
+  if(over){
+    container.innerHTML+=`<div style="font-size:10px;color:#FBBF24;margin-top:6px;padding:6px 8px;background:#1a1200;border-radius:6px">
+      ⚠ All-inが入りました。次のストリートへ進むか、クリアしてください。
+    </div>`;
+  }
 }
 
 function buildActionString(){
