@@ -1379,6 +1379,13 @@ function savePlayer(){
   closeSheet(); // シートを閉じて即時反映
 }
 
+function deletePlayer(playerName){
+  const players=loadPlayers().filter(p=>p.name!==playerName);
+  savePlayers(players);
+  if(state.activeSheet!==null) renderSheetPlayers(state.activeSheet);
+  renderBookList();
+}
+
 function applyPlayer(seatIdx,playerName){
   const players=loadPlayers();
   const p=players.find(p=>p.name===playerName);
@@ -2029,21 +2036,7 @@ function closeHandModal(){
 }
 
 function renderLogPosBtns(){
-  const el=document.getElementById('log-pos-btns');
-  if(!el) return;
-  const p=pos();
-  el.innerHTML=p.map((seat,i)=>{
-    const isHero=i===state.heroIdx;
-    const pname=state.seatProfiles[i]?.name||'';
-    const bg=isHero?'var(--gold)':'transparent';
-    const color=isHero?'#0a1a0a':'var(--text-dim)';
-    const border=isHero?'var(--gold)':'var(--border2)';
-    const label=isHero?('★ '+seat):pname?seat+'\n'+pname:seat;
-    return`<button onclick="setHeroFromLog(${i})" style="padding:5px 8px;border-radius:4px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0;background:${bg};color:${color};border:1px solid ${border};display:flex;flex-direction:column;align-items:center;line-height:1.3">
-      <span>${isHero?'★ ':''} ${seat}</span>
-      ${pname?`<span style="font-size:9px;color:${isHero?'#0a1a0a':'#c9a227'};font-weight:600">${pname.length>6?pname.slice(0,5)+'…':pname}</span>`:''}
-    </button>`;
-  }).join('');
+  // log-pos-btns は非表示。ab-hero-pos-btns 側で管理するため何もしない
   const hpEl=document.getElementById('log-hero-pos');
   if(hpEl) hpEl.textContent=heroPos();
 }
