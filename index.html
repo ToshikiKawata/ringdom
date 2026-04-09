@@ -213,6 +213,7 @@ button:active{transform:scale(0.94);opacity:0.85}
     <div class="ob-dot active" id="ob-dot-0"></div>
     <div class="ob-dot" id="ob-dot-1"></div>
     <div class="ob-dot" id="ob-dot-2"></div>
+    <div class="ob-dot" id="ob-dot-3"></div>
   </div>
 
   <!-- Slides -->
@@ -222,20 +223,14 @@ button:active{transform:scale(0.94);opacity:0.85}
 ```
 <!-- Slide 0 -->
 <div class="ob-slide" id="ob-slide-0" style="transform:translateX(0%)">
-  <div style="padding:40px 32px 0;text-align:center">
-    <div style="font-size:28px;font-weight:800;color:#c9a227;letter-spacing:3px;margin-bottom:8px">RINGDOM</div>
-    <div style="width:48px;height:2px;background:#c9a227;margin:0 auto 32px"></div>
-    <div style="font-size:20px;font-weight:700;color:#e8f0e8;line-height:1.6;margin-bottom:16px">
-      読んで、狙って、奪う。
+  <div style="padding:80px 32px 0;text-align:center">
+    <div style="font-size:36px;font-weight:800;color:#c9a227;letter-spacing:4px;margin-bottom:12px">RINGDOM</div>
+    <div style="width:48px;height:2px;background:#c9a227;margin:0 auto 48px"></div>
+    <div style="font-size:52px;margin-bottom:60px">♠</div>
+    <div style="background:#1a0f00;border:1px solid #7a3a00;border-radius:12px;padding:16px 20px;text-align:left">
+      <div style="font-size:12px;color:#f97316;font-weight:700;margin-bottom:6px">⚠ プレー中の使用は推奨しません。</div>
+      <div style="font-size:12px;color:#a07050;line-height:1.7">事前準備と振り返りのためのツールです。</div>
     </div>
-    <div style="font-size:14px;color:#7a9a7a;line-height:1.8">
-      勝つ準備が、勝率を変える。
-    </div>
-    <div style="margin-top:24px;padding:12px 16px;background:#1a0f00;border:1px solid #7a3a00;border-radius:10px;text-align:left">
-      <div style="font-size:11px;color:#f97316;font-weight:700;margin-bottom:4px">⚠ プレー中の使用は推奨しません。</div>
-      <div style="font-size:11px;color:#a07050;line-height:1.6">事前準備と振り返りのためのツールです。</div>
-    </div>
-    <div style="margin-top:32px;font-size:48px">♠</div>
   </div>
 </div>
 
@@ -301,6 +296,46 @@ button:active{transform:scale(0.94);opacity:0.85}
           <div style="font-size:11px;color:#7a9a7a;line-height:1.6">誰を・どう搾取するか即座に確認</div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 3 -->
+<div class="ob-slide" id="ob-slide-3" style="transform:translateX(100%)">
+  <div style="padding:40px 24px 0">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="display:inline-block;background:#1a0f00;border:1px solid #f97316;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;color:#f97316;letter-spacing:1px;margin-bottom:12px">β版 無料公開中</div>
+      <div style="font-size:18px;font-weight:800;color:#e8f0e8">今は全機能が無料です</div>
+    </div>
+
+    <div style="background:#0d1f0d;border:1px solid #2a4a2a;border-radius:12px;padding:14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:800;color:#e8f0e8">Free</div>
+        <div style="font-size:12px;color:#4ade80;font-weight:700">¥0</div>
+      </div>
+      <div style="font-size:11px;color:#7a9a7a;line-height:1.9">
+        ✓ テーブル設定・レンジ表<br>
+        ✓ エクイティ計算<br>
+        ✓ AI評価 月3回<br>
+        ✓ プレイヤー帳 5人まで
+      </div>
+    </div>
+
+    <div style="background:#1a1200;border:1px solid #c9a227;border-radius:12px;padding:14px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:800;color:#c9a227">Pro</div>
+        <div style="font-size:12px;color:#c9a227;font-weight:700">¥980 / 月（正式リリース後）</div>
+      </div>
+      <div style="font-size:11px;color:#b0a080;line-height:1.9">
+        ✓ AI評価 無制限<br>
+        ✓ プレイヤー帳 無制限<br>
+        ✓ 評価履歴クラウド保存<br>
+        ✓ 新機能への優先アクセス
+      </div>
+    </div>
+
+    <div style="font-size:10px;color:#3a5a3a;text-align:center;line-height:1.7">
+      β版の間は制限なく全機能をお使いいただけます。<br>フィードバックをお待ちしています。
     </div>
   </div>
 </div>
@@ -1394,8 +1429,15 @@ function savePlayer(){
 function deletePlayer(playerName){
   const players=loadPlayers().filter(p=>p.name!==playerName);
   savePlayers(players);
+  // 席に同名プレイヤーが登録されていたらnameをクリア
+  state.seatProfiles.forEach((pro,i)=>{
+    if(pro&&pro.name===playerName){
+      state.seatProfiles[i]={...pro,name:''};
+    }
+  });
   if(state.activeSheet!==null) renderSheetPlayers(state.activeSheet);
   renderBookList();
+  renderAll();
 }
 
 function applyPlayer(seatIdx,playerName){
@@ -2830,7 +2872,7 @@ function renderActionLog(){
 
   container.innerHTML=actionLog.map((e,i)=>{
     if(e.type==='street'){
-      return`<div class="action-entry street-div">${e.label}<button class="action-del" onclick="deleteAction(${i})">✕</button></div>`;
+      return`<div class="action-entry street-div">${e.label}</div>`;
     }
     const isHero=e.player===heroPos();
     const aLabel=ACTION_LABELS[e.action]||e.action;
@@ -3551,7 +3593,7 @@ document.addEventListener('touchstart', e=>{
 },{passive:true});
 (function(){
   let currentSlide=0;
-  const TOTAL=3;
+  const TOTAL=4;
 
   function showOnboarding(){
     // 開発中は毎回表示（LocalStorageのフラグも削除）
