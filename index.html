@@ -116,7 +116,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 .tab{flex:1;padding:10px 4px;text-align:center;font-size:10px;font-weight:700;letter-spacing:0.5px;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap;overflow:hidden}
 .tab.active{color:var(--gold);border-bottom-color:var(--gold)}
 .content{flex:1;overflow:hidden;position:relative}
-.panel{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none}
+.panel{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;display:none;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
 .panel.active{display:block}
 #panel-table{background:var(--green-dark)}
 .table-wrap{padding:16px 12px 8px;display:flex;justify-content:center}
@@ -207,7 +207,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 
 <!-- ── Onboarding ── -->
 
-<div id="onboarding" style="position:fixed;inset:0;z-index:9999;background:#071507;display:flex;flex-direction:column;touch-action:pan-y">
+<div id="onboarding" style="position:fixed;inset:0;z-index:9999;background:#071507;display:flex;flex-direction:column;touch-action:pan-y;padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)">
   <!-- Progress dots -->
   <div style="display:flex;justify-content:center;gap:8px;padding-top:calc(env(safe-area-inset-top,0px) + 52px);padding-bottom:0">
     <div class="ob-dot active" id="ob-dot-0"></div>
@@ -435,7 +435,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 
   <!-- ── Play Log Panel ── -->
 
-  <div class="panel" id="panel-log" style="background:var(--green-dark);padding:12px 14px 20px;overflow-y:auto">
+  <div class="panel" id="panel-log" style="background:var(--green-dark);padding:12px 16px 20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px">PLAY LOG</div>
     </div>
