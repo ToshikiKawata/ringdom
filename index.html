@@ -106,13 +106,13 @@ html{height:100%;background:#071507}
 body{font-family:'Inter','Courier New',monospace;color:var(--text);display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--green-dark)}
 button{transition:transform .1s ease,opacity .1s ease}
 button:active{transform:scale(0.94);opacity:0.85}
-.header{background:linear-gradient(180deg,#0d2a0d,#0a1a0a);border-bottom:1.5px solid var(--gold-dim);padding:12px 16px 10px;padding-top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header{background:linear-gradient(180deg,#0d2a0d,#0a1a0a);border-bottom:1.5px solid var(--gold-dim);padding:12px 16px 10px;padding-top:calc(env(safe-area-inset-top, 0px) + 12px);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .header-title{font-size:14px;font-weight:700;color:var(--gold);letter-spacing:2px}
 .header-sub{font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-top:1px}
 .size-btns{display:flex;gap:5px}
 .size-btn{padding:5px 10px;border-radius:4px;font-size:11px;font-weight:700;border:1px solid var(--border2);background:transparent;color:var(--text-dim);cursor:pointer;font-family:inherit}
 .size-btn.active{background:var(--gold);color:#0a1a0a;border-color:var(--gold)}
-.tabbar{display:flex;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)}
+.tabbar{display:flex;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px)}
 .tab{flex:1;padding:10px 4px;text-align:center;font-size:10px;font-weight:700;letter-spacing:0.5px;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap;overflow:hidden}
 .tab.active{color:var(--gold);border-bottom-color:var(--gold)}
 .content{flex:1;overflow:hidden;position:relative}
@@ -199,7 +199,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ob-dot{width:6px;height:6px;border-radius:50%;background:#2a4a2a;transition:all .3s}
 .ob-dot.active{width:20px;border-radius:3px;background:#c9a227}
-.ob-slide{position:absolute;inset:0;transition:transform .35s cubic-bezier(.32,.72,0,1);overflow-y:auto}
+.ob-slide{position:absolute;inset:0;transition:transform .35s cubic-bezier(.32,.72,0,1);overflow:hidden}
 .ob-step{display:flex;gap:14px;align-items:flex-start;margin-bottom:22px;background:#0d1f0d;border-radius:12px;padding:14px}
 .ob-step-num{font-size:20px;font-weight:800;color:#c9a227;opacity:0.5;flex-shrink:0;line-height:1;margin-top:2px}
 ::-webkit-scrollbar{display:none}
@@ -209,7 +209,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 
 <div id="onboarding" style="position:fixed;inset:0;z-index:9999;background:#071507;display:flex;flex-direction:column;touch-action:pan-y">
   <!-- Progress dots -->
-  <div style="display:flex;justify-content:center;gap:8px;padding:52px 0 0">
+  <div style="display:flex;justify-content:center;gap:8px;padding-top:calc(env(safe-area-inset-top,0px) + 52px);padding-bottom:0">
     <div class="ob-dot active" id="ob-dot-0"></div>
     <div class="ob-dot" id="ob-dot-1"></div>
     <div class="ob-dot" id="ob-dot-2"></div>
@@ -226,10 +226,10 @@ button:active{transform:scale(0.94);opacity:0.85}
     <div style="font-size:28px;font-weight:800;color:#c9a227;letter-spacing:3px;margin-bottom:8px">RINGDOM</div>
     <div style="width:48px;height:2px;background:#c9a227;margin:0 auto 32px"></div>
     <div style="font-size:20px;font-weight:700;color:#e8f0e8;line-height:1.6;margin-bottom:16px">
-      GTOではなく、<br>今夜の相手に勝つ。
+      読んで、狙って、奪う。
     </div>
     <div style="font-size:14px;color:#7a9a7a;line-height:1.8">
-      リアルタイムで<br>エクスプロイト戦略を提示する<br>ポーカーツール
+      勝つ準備が、勝率を変える。
     </div>
     <div style="margin-top:24px;padding:12px 16px;background:#1a0f00;border:1px solid #7a3a00;border-radius:10px;text-align:left">
       <div style="font-size:11px;color:#f97316;font-weight:700;margin-bottom:4px">⚠ プレー中の使用は推奨しません。</div>
@@ -272,26 +272,26 @@ button:active{transform:scale(0.94);opacity:0.85}
 
 <!-- Slide 2 -->
 <div class="ob-slide" id="ob-slide-2" style="transform:translateX(100%)">
-  <div style="padding:40px 28px 0;text-align:center">
-    <div style="font-size:13px;color:#c9a227;letter-spacing:2px;font-weight:700;margin-bottom:20px">さあ始めよう</div>
+  <div style="padding:24px 24px 0;text-align:center">
+    <div style="font-size:13px;color:#c9a227;letter-spacing:2px;font-weight:700;margin-bottom:16px">さあ始めよう</div>
 
-    <div style="font-size:18px;font-weight:700;color:#e8f0e8;line-height:1.7;margin-bottom:28px">
+    <div style="font-size:17px;font-weight:700;color:#e8f0e8;line-height:1.6;margin-bottom:20px">
       まず自分の席を<br>ダブルタップして始めよう
     </div>
 
-    <div style="background:#0d1a0d;border:1px solid #1a4a1a;border-radius:14px;padding:18px;margin-bottom:12px;text-align:left">
-      <div style="font-size:11px;color:#4ade80;font-weight:700;margin-bottom:6px">セッション前に</div>
-      <div style="font-size:12px;color:#a0c0a0;line-height:1.8">相手をテーブルタブに登録して<br>卓に座る前に答えを持っておく</div>
+    <div style="background:#0d1a0d;border:1px solid #1a4a1a;border-radius:12px;padding:14px;margin-bottom:10px;text-align:left">
+      <div style="font-size:11px;color:#4ade80;font-weight:700;margin-bottom:4px">セッション前に</div>
+      <div style="font-size:11px;color:#a0c0a0;line-height:1.7">相手をテーブルタブに登録して<br>卓に座る前に答えを持っておく</div>
     </div>
 
-    <div style="background:#0d1a2a;border:1px solid #1a3a5a;border-radius:14px;padding:18px;margin-bottom:12px;text-align:left">
-      <div style="font-size:11px;color:#60A5FA;font-weight:700;margin-bottom:6px">セッション後に</div>
-      <div style="font-size:12px;color:#a0b0c0;line-height:1.8">気になったハンドをLOGに記録して<br>AIコーチに振り返りを依頼する</div>
+    <div style="background:#0d1a2a;border:1px solid #1a3a5a;border-radius:12px;padding:14px;margin-bottom:10px;text-align:left">
+      <div style="font-size:11px;color:#60A5FA;font-weight:700;margin-bottom:4px">セッション後に</div>
+      <div style="font-size:11px;color:#a0b0c0;line-height:1.7">気になったハンドをLOGに記録して<br>AIコーチに振り返りを依頼する</div>
     </div>
 
-    <div style="background:#1a1200;border:1px solid #3a2a00;border-radius:14px;padding:18px;text-align:left">
-      <div style="font-size:11px;color:#c9a227;font-weight:700;margin-bottom:6px">よく会う相手は</div>
-      <div style="font-size:12px;color:#b0a080;line-height:1.8">Playersタブに保存して<br>次回セッションですぐ呼び出し</div>
+    <div style="background:#1a1200;border:1px solid #3a2a00;border-radius:12px;padding:14px;text-align:left">
+      <div style="font-size:11px;color:#c9a227;font-weight:700;margin-bottom:4px">よく会う相手は</div>
+      <div style="font-size:11px;color:#b0a080;line-height:1.7">Playersタブに保存して<br>次回セッションですぐ呼び出し</div>
     </div>
   </div>
 </div>
@@ -301,7 +301,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 
   <!-- Bottom buttons -->
 
-  <div style="padding:20px 24px 40px;display:flex;flex-direction:column;gap:10px">
+  <div style="padding:20px 24px;padding-bottom:calc(env(safe-area-inset-bottom,0px) + 20px);display:flex;flex-direction:column;gap:10px">
     <button id="ob-next-btn" onclick="obNext()" style="width:100%;padding:15px;border-radius:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;background:#c9a227;color:#0a1a0a;border:none">次へ</button>
     <button onclick="obSkip()" style="width:100%;padding:10px;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;background:transparent;color:#3a5a3a;border:none">スキップ</button>
   </div>
@@ -3575,8 +3575,10 @@ document.addEventListener('touchstart', e=>{
   const TOTAL=3;
 
   function showOnboarding(){
-    // 初回のみ表示
-    if(localStorage.getItem('ra_onboarded')) { finishOnboarding(false); return; }
+    // 開発中は毎回表示（LocalStorageのフラグも削除）
+    localStorage.removeItem('ra_onboarded');
+    // リリース時は上記を削除して下記を有効にする:
+    // if(localStorage.getItem('ra_onboarded')){ finishOnboarding(false); return; }
   }
 
   function obGoTo(n){
