@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#071507">
 
 <!-- PWA Manifest (inline) -->
+
 <script>
 (function(){
   const manifest={
@@ -51,6 +52,7 @@
 </script>
 
 <!-- Apple Touch Icon (SVG inline → link) -->
+
 <script>
 (function(){
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 100 100">
@@ -68,6 +70,7 @@
 </script>
 
 <!-- Service Worker registration -->
+
 <script>
 if('serviceWorker' in navigator){
   const swCode=`
@@ -192,7 +195,8 @@ button:active{transform:scale(0.94);opacity:0.85}
 .action-entry{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;margin-bottom:4px;font-size:11px}
 .action-entry.street-div{background:#0d2410;border:1px solid #1a4a1a;color:var(--green-accent);font-weight:700;font-size:10px;letter-spacing:1px}
 .action-entry.action-row{background:var(--surface3);border:1px solid var(--border)}
-.action-del{margin-left:auto;background:transparent;border:none;color:#f87171;cursor:pointer;font-size:12px;padding:0 2px;line-height:1}
+.eval-spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(0,0,0,0.3);border-top-color:#0a1a0a;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
 .ob-dot{width:6px;height:6px;border-radius:50%;background:#2a4a2a;transition:all .3s}
 .ob-dot.active{width:20px;border-radius:3px;background:#c9a227}
 .ob-slide{position:absolute;inset:0;transition:transform .35s cubic-bezier(.32,.72,0,1);overflow-y:auto}
@@ -202,6 +206,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 </style>
 
 <!-- ── Onboarding ── -->
+
 <div id="onboarding" style="position:fixed;inset:0;z-index:9999;background:#071507;display:flex;flex-direction:column;touch-action:pan-y">
   <!-- Progress dots -->
   <div style="display:flex;justify-content:center;gap:8px;padding:52px 0 0">
@@ -211,79 +216,91 @@ button:active{transform:scale(0.94);opacity:0.85}
   </div>
 
   <!-- Slides -->
+
   <div id="ob-slides" style="flex:1;overflow:hidden;position:relative">
 
-    <!-- Slide 0 -->
-    <div class="ob-slide" id="ob-slide-0" style="transform:translateX(0%)">
-      <div style="padding:40px 32px 0;text-align:center">
-        <div style="font-size:28px;font-weight:800;color:#c9a227;letter-spacing:3px;margin-bottom:8px">RINGDOM</div>
-        <div style="width:48px;height:2px;background:#c9a227;margin:0 auto 32px"></div>
-        <div style="font-size:20px;font-weight:700;color:#e8f0e8;line-height:1.6;margin-bottom:16px">
-          GTOではなく、<br>今夜の相手に勝つ。
-        </div>
-        <div style="font-size:14px;color:#7a9a7a;line-height:1.8">
-          リアルタイムで<br>エクスプロイト戦略を提示する<br>ポーカーツール
-        </div>
-        <div style="margin-top:48px;font-size:48px">♠</div>
+```
+<!-- Slide 0 -->
+<div class="ob-slide" id="ob-slide-0" style="transform:translateX(0%)">
+  <div style="padding:40px 32px 0;text-align:center">
+    <div style="font-size:28px;font-weight:800;color:#c9a227;letter-spacing:3px;margin-bottom:8px">RINGDOM</div>
+    <div style="width:48px;height:2px;background:#c9a227;margin:0 auto 32px"></div>
+    <div style="font-size:20px;font-weight:700;color:#e8f0e8;line-height:1.6;margin-bottom:16px">
+      GTOではなく、<br>今夜の相手に勝つ。
+    </div>
+    <div style="font-size:14px;color:#7a9a7a;line-height:1.8">
+      リアルタイムで<br>エクスプロイト戦略を提示する<br>ポーカーツール
+    </div>
+    <div style="margin-top:24px;padding:12px 16px;background:#1a0f00;border:1px solid #7a3a00;border-radius:10px;text-align:left">
+      <div style="font-size:11px;color:#f97316;font-weight:700;margin-bottom:4px">⚠ プレー中の使用は推奨しません。</div>
+      <div style="font-size:11px;color:#a07050;line-height:1.6">事前準備と振り返りのためのツールです。</div>
+    </div>
+    <div style="margin-top:32px;font-size:48px">♠</div>
+  </div>
+</div>
+
+<!-- Slide 1 -->
+<div class="ob-slide" id="ob-slide-1" style="transform:translateX(100%)">
+  <div style="padding:32px 24px 0">
+    <div style="font-size:13px;color:#c9a227;letter-spacing:2px;font-weight:700;margin-bottom:24px;text-align:center">使い方</div>
+
+    <div class="ob-step">
+      <div class="ob-step-num">01</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#e8f0e8;margin-bottom:4px">相手を読む</div>
+        <div style="font-size:12px;color:#7a9a7a;line-height:1.7">フィッシュ・ステーション・フォールダー…<br>今夜の卓の人物像をテーブルタブで登録する。</div>
       </div>
     </div>
 
-    <!-- Slide 1 -->
-    <div class="ob-slide" id="ob-slide-1" style="transform:translateX(100%)">
-      <div style="padding:32px 24px 0">
-        <div style="font-size:13px;color:#c9a227;letter-spacing:2px;font-weight:700;margin-bottom:24px;text-align:center">使い方</div>
-
-        <div class="ob-step">
-          <div class="ob-step-num">01</div>
-          <div>
-            <div style="font-size:15px;font-weight:700;color:#e8f0e8;margin-bottom:4px">テーブルを設定する</div>
-            <div style="font-size:12px;color:#7a9a7a;line-height:1.7">席をダブルタップしてHeroを設定。<br>席をタップして相手の特徴を入力。<br>（タイト / ルース / フィッシュ など）</div>
-          </div>
-        </div>
-
-        <div class="ob-step">
-          <div class="ob-step-num">02</div>
-          <div>
-            <div style="font-size:15px;font-weight:700;color:#e8f0e8;margin-bottom:4px">レンジが自動補正される</div>
-            <div style="font-size:12px;color:#7a9a7a;line-height:1.7">相手の傾向・スタック・レーキ・<br>人数を加味したオープンレンジを表示。<br>マスをタップで詳細確認。</div>
-          </div>
-        </div>
-
-        <div class="ob-step">
-          <div class="ob-step-num">03</div>
-          <div>
-            <div style="font-size:15px;font-weight:700;color:#e8f0e8;margin-bottom:4px">EXPLOITで戦略確認</div>
-            <div style="font-size:12px;color:#7a9a7a;line-height:1.7">テーブル中央のEXPLOITボタンを押すと、<br>誰から搾取すべきか・ブラフは誰に<br>有効かをまとめて提示。</div>
-          </div>
-        </div>
+    <div class="ob-step">
+      <div class="ob-step-num">02</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#e8f0e8;margin-bottom:4px">レンジが変わる</div>
+        <div style="font-size:12px;color:#7a9a7a;line-height:1.7">相手・スタック・レーキに応じて<br>最適なオープンレンジを自動で提示。<br>EXPLOITボタンで搾取戦略も確認。</div>
       </div>
     </div>
 
-    <!-- Slide 2 -->
-    <div class="ob-slide" id="ob-slide-2" style="transform:translateX(100%)">
-      <div style="padding:40px 28px 0;text-align:center">
-        <div style="font-size:13px;color:#c9a227;letter-spacing:2px;font-weight:700;margin-bottom:24px">さあ始めよう</div>
-
-        <div style="background:#0d2410;border:1px solid #1a4a1a;border-radius:14px;padding:20px;margin-bottom:16px;text-align:left">
-          <div style="font-size:12px;color:#4ade80;font-weight:700;margin-bottom:8px">テーブルタブで</div>
-          <div style="font-size:12px;color:#a0c0a0;line-height:1.8">席を<span style="color:#c9a227;font-weight:700">ダブルタップ</span> → 自分のポジション設定<br>席を<span style="color:#c9a227;font-weight:700">タップ</span> → 相手プロフィール入力</div>
-        </div>
-
-        <div style="background:#0d1a2a;border:1px solid #1a3a5a;border-radius:14px;padding:20px;margin-bottom:16px;text-align:left">
-          <div style="font-size:12px;color:#60A5FA;font-weight:700;margin-bottom:8px">レンジタブで</div>
-          <div style="font-size:12px;color:#a0b0c0;line-height:1.8">ポジション・スタック・シナリオを<br>選んでレンジ表を確認</div>
-        </div>
-
-        <div style="background:#1a1200;border:1px solid #3a2a00;border-radius:14px;padding:20px;text-align:left">
-          <div style="font-size:12px;color:#c9a227;font-weight:700;margin-bottom:8px">Players タブで</div>
-          <div style="font-size:12px;color:#b0a080;line-height:1.8">よく対戦する相手を保存して<br>次回セッションですぐ呼び出し</div>
-        </div>
+    <div class="ob-step">
+      <div class="ob-step-num">03</div>
+      <div>
+        <div style="font-size:15px;font-weight:700;color:#e8f0e8;margin-bottom:4px">AIに相談する</div>
+        <div style="font-size:12px;color:#7a9a7a;line-height:1.7">ハンドを記録してAIに評価してもらう。<br>「あのプレーは正しかったか？」<br>相手の特徴を踏まえた改善点を提示。</div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- Slide 2 -->
+<div class="ob-slide" id="ob-slide-2" style="transform:translateX(100%)">
+  <div style="padding:40px 28px 0;text-align:center">
+    <div style="font-size:13px;color:#c9a227;letter-spacing:2px;font-weight:700;margin-bottom:20px">さあ始めよう</div>
+
+    <div style="font-size:18px;font-weight:700;color:#e8f0e8;line-height:1.7;margin-bottom:28px">
+      まず自分の席を<br>ダブルタップして始めよう
+    </div>
+
+    <div style="background:#0d1a0d;border:1px solid #1a4a1a;border-radius:14px;padding:18px;margin-bottom:12px;text-align:left">
+      <div style="font-size:11px;color:#4ade80;font-weight:700;margin-bottom:6px">セッション前に</div>
+      <div style="font-size:12px;color:#a0c0a0;line-height:1.8">相手をテーブルタブに登録して<br>卓に座る前に答えを持っておく</div>
+    </div>
+
+    <div style="background:#0d1a2a;border:1px solid #1a3a5a;border-radius:14px;padding:18px;margin-bottom:12px;text-align:left">
+      <div style="font-size:11px;color:#60A5FA;font-weight:700;margin-bottom:6px">セッション後に</div>
+      <div style="font-size:12px;color:#a0b0c0;line-height:1.8">気になったハンドをLOGに記録して<br>AIコーチに振り返りを依頼する</div>
+    </div>
+
+    <div style="background:#1a1200;border:1px solid #3a2a00;border-radius:14px;padding:18px;text-align:left">
+      <div style="font-size:11px;color:#c9a227;font-weight:700;margin-bottom:6px">よく会う相手は</div>
+      <div style="font-size:12px;color:#b0a080;line-height:1.8">Playersタブに保存して<br>次回セッションですぐ呼び出し</div>
+    </div>
+  </div>
+</div>
+```
 
   </div>
 
   <!-- Bottom buttons -->
+
   <div style="padding:20px 24px 40px;display:flex;flex-direction:column;gap:10px">
     <button id="ob-next-btn" onclick="obNext()" style="width:100%;padding:15px;border-radius:12px;font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;background:#c9a227;color:#0a1a0a;border:none">次へ</button>
     <button onclick="obSkip()" style="width:100%;padding:10px;border-radius:8px;font-size:12px;font-family:inherit;cursor:pointer;background:transparent;color:#3a5a3a;border:none">スキップ</button>
@@ -400,6 +417,7 @@ button:active{transform:scale(0.94);opacity:0.85}
   </div>
 
   <!-- Player Book Panel -->
+
   <div class="panel" id="panel-book" style="background:var(--green-dark)">
     <div style="padding:14px 16px 8px;display:flex;justify-content:space-between;align-items:center">
       <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px">PLAYER BOOK</div>
@@ -416,6 +434,7 @@ button:active{transform:scale(0.94);opacity:0.85}
   </div>
 
   <!-- ── Play Log Panel ── -->
+
   <div class="panel" id="panel-log" style="background:var(--green-dark);padding:12px 14px 20px;overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px">PLAY LOG</div>
@@ -423,95 +442,114 @@ button:active{transform:scale(0.94);opacity:0.85}
     <!-- Hero pos btns hidden - now inside action builder -->
     <div id="log-pos-btns" style="display:none"></div>
 
-    <!-- Hero Hand Picker -->
-    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
-      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">自分のハンド（2枚選択）</div>
-      <div id="hero-hand-display" onclick="openCardPicker('hand')" style="display:flex;gap:8px;align-items:center;cursor:pointer;min-height:56px">
-        <div id="hero-card-0" class="card-slot">?</div>
-        <div id="hero-card-1" class="card-slot">?</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-left:4px">タップして選択</div>
-      </div>
-    </div>
+```
+<!-- Hero Hand Picker -->
+<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+  <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">自分のハンド（2枚選択）</div>
+  <div id="hero-hand-display" onclick="openCardPicker('hand')" style="display:flex;gap:8px;align-items:center;cursor:pointer;min-height:56px">
+    <div id="hero-card-0" class="card-slot">?</div>
+    <div id="hero-card-1" class="card-slot">?</div>
+    <div style="font-size:11px;color:var(--text-dim);margin-left:4px">タップして選択</div>
+  </div>
+</div>
 
-    <!-- Board Picker -->
-    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
-      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">ボード（最大5枚）</div>
-      <div id="board-display" onclick="openCardPicker('board')" style="display:flex;gap:6px;align-items:center;cursor:pointer;min-height:56px;flex-wrap:wrap">
-        <div id="board-card-0" class="card-slot">?</div>
-        <div id="board-card-1" class="card-slot">?</div>
-        <div id="board-card-2" class="card-slot">?</div>
-        <div style="width:1px;height:40px;background:var(--border2)"></div>
-        <div id="board-card-3" class="card-slot">?</div>
-        <div style="width:1px;height:40px;background:var(--border2)"></div>
-        <div id="board-card-4" class="card-slot">?</div>
-        <div style="font-size:11px;color:var(--text-dim);margin-left:2px">タップして選択</div>
-      </div>
-    </div>
+<!-- Board Picker -->
+<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+  <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">ボード（最大5枚）</div>
+  <div id="board-display" onclick="openCardPicker('board')" style="display:flex;gap:6px;align-items:center;cursor:pointer;min-height:56px;flex-wrap:wrap">
+    <div id="board-card-0" class="card-slot">?</div>
+    <div id="board-card-1" class="card-slot">?</div>
+    <div id="board-card-2" class="card-slot">?</div>
+    <div style="width:1px;height:40px;background:var(--border2)"></div>
+    <div id="board-card-3" class="card-slot">?</div>
+    <div style="width:1px;height:40px;background:var(--border2)"></div>
+    <div id="board-card-4" class="card-slot">?</div>
+    <div style="font-size:11px;color:var(--text-dim);margin-left:2px">タップして選択</div>
+  </div>
+</div>
 
 
-    <!-- Action Builder -->
-    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">アクション経緯</div>
-        <button onclick="clearActions()" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">クリア</button>
-      </div>
-      <!-- Hero position selector inside action builder -->
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px;background:var(--surface3);border-radius:8px;border:1px solid var(--border)">
-        <div style="font-size:10px;color:var(--gold);font-weight:700;flex-shrink:0">Hero</div>
-        <div id="ab-hero-pos-btns" style="display:flex;gap:4px;overflow-x:auto;flex:1;-webkit-overflow-scrolling:touch"></div>
-      </div>
-      <!-- Log display -->
-      <div id="action-log" style="margin-bottom:10px;min-height:24px"></div>
-      <!-- Next street button - shows only next available street -->
-      <div id="next-street-row" style="margin-bottom:10px"></div>
-      <!-- Player + Action -->
-      <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
-        <select id="ab-player" style="flex:1;padding:7px 4px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:11px;outline:none"></select>
-        <select id="ab-action" onchange="onAbActionChange()" style="flex:1;padding:7px 4px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:11px;outline:none">
-          <option value="fold">Fold</option>
-          <option value="check">Check</option>
-          <option value="call">Call</option>
-          <option value="bet">Bet</option>
-          <option value="raise">Raise</option>
-          <option value="3bet">3-Bet</option>
-          <option value="allin">All-in</option>
-        </select>
-      </div>
-      <!-- Size input -->
-      <div id="ab-size-row" style="display:none;margin-bottom:8px">
-        <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">サイズ</div>
-        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
-          <button onclick="setAbSize('0.33')" class="size-quick-btn">1/3P</button>
-          <button onclick="setAbSize('0.5')"  class="size-quick-btn">1/2P</button>
-          <button onclick="setAbSize('0.75')" class="size-quick-btn">3/4P</button>
-          <button onclick="setAbSize('1')"    class="size-quick-btn">ポット</button>
-          <button onclick="setAbSize('2')"    class="size-quick-btn">2x</button>
-          <button onclick="setAbSize('2.5')"  class="size-quick-btn">2.5x</button>
-        </div>
-        <div style="display:flex;gap:6px;align-items:center">
-          <input id="ab-size" type="number" placeholder="BBサイズ" step="0.5"
-            style="flex:1;padding:7px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;outline:none">
-          <span style="font-size:11px;color:var(--text-dim)">BB</span>
-        </div>
-      </div>
-      <button id="add-action-btn" onclick="addAction()" style="width:100%;padding:11px;border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#16a34a;color:#fff;border:none">追加する</button>
+<!-- Action Builder -->
+<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">アクション経緯</div>
+    <button onclick="clearActions()" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">クリア</button>
+  </div>
+  <!-- Hero position selector inside action builder -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px;background:var(--surface3);border-radius:8px;border:1px solid var(--border)">
+    <div style="font-size:10px;color:var(--gold);font-weight:700;flex-shrink:0">Hero</div>
+    <div id="ab-hero-pos-btns" style="display:flex;gap:4px;overflow-x:auto;flex:1;-webkit-overflow-scrolling:touch"></div>
+  </div>
+  <!-- Log display -->
+  <div id="action-log" style="margin-bottom:10px;min-height:24px"></div>
+  <!-- Next street button - shows only next available street -->
+  <div id="next-street-row" style="margin-bottom:10px"></div>
+  <!-- Player + Action -->
+  <div style="display:flex;gap:6px;margin-bottom:8px;align-items:center">
+    <select id="ab-player" style="flex:1;padding:7px 4px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:11px;outline:none"></select>
+    <select id="ab-action" onchange="onAbActionChange()" style="flex:1;padding:7px 4px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:11px;outline:none">
+      <option value="fold">Fold</option>
+      <option value="check">Check</option>
+      <option value="call">Call</option>
+      <option value="bet">Bet</option>
+      <option value="raise">Raise</option>
+      <option value="3bet">3-Bet</option>
+      <option value="allin">All-in</option>
+    </select>
+  </div>
+  <!-- Size input -->
+  <div id="ab-size-row" style="display:none;margin-bottom:8px">
+    <div style="font-size:9px;color:var(--text-dim);margin-bottom:5px">サイズ</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+      <button onclick="setAbSize('0.33')" class="size-quick-btn">1/3P</button>
+      <button onclick="setAbSize('0.5')"  class="size-quick-btn">1/2P</button>
+      <button onclick="setAbSize('0.75')" class="size-quick-btn">3/4P</button>
+      <button onclick="setAbSize('1')"    class="size-quick-btn">ポット</button>
+      <button onclick="setAbSize('2')"    class="size-quick-btn">2x</button>
+      <button onclick="setAbSize('2.5')"  class="size-quick-btn">2.5x</button>
     </div>
-    <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:12px">
-      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">評価してほしいポイント</div>
-      <textarea id="log-question" rows="2" placeholder="例: 3betは正しかった？ベットサイズは？" style="width:100%;padding:8px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;outline:none;resize:none;line-height:1.5"></textarea>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input id="ab-size" type="number" placeholder="BBサイズ" step="0.5"
+        style="flex:1;padding:7px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;outline:none">
+      <span style="font-size:11px;color:var(--text-dim)">BB</span>
     </div>
-    <button onclick="evaluatePlay()" id="eval-btn" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#2a3a2a;color:#5a7a5a;border:none;margin-bottom:14px">
-      AIに評価してもらう（ハンドとアクションを入力してください）
+  </div>
+  <button id="add-action-btn" onclick="addAction()" style="width:100%;padding:11px;border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#16a34a;color:#fff;border:none">追加する</button>
+</div>
+<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:12px">
+  <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">評価してほしいポイント</div>
+  <textarea id="log-question" rows="2" placeholder="例: 3betは正しかった？ベットサイズは？" style="width:100%;padding:8px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;outline:none;resize:none;line-height:1.5"></textarea>
+</div>
+<button onclick="evaluatePlay()" id="eval-btn" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#2a3a2a;color:#5a7a5a;border:none;margin-bottom:14px">
+  AIに評価してもらう（ハンドとアクションを入力してください）
+</button>
+<div id="eval-result" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:10px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+    <div style="font-size:9px;color:var(--gold);letter-spacing:1.5px">AI評価</div>
+    <button onclick="shareToX()" style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;background:#000;color:#fff;border:none">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.736l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+      ポスト
     </button>
-    <div id="eval-result" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px">
-      <div style="font-size:9px;color:var(--gold);letter-spacing:1.5px;margin-bottom:10px">AI評価</div>
-      <div id="eval-rating" style="font-size:22px;margin-bottom:8px;padding-bottom:10px;border-bottom:1px solid var(--border)"></div>
-      <div id="eval-comment" style="font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap"></div>
-    </div>
+  </div>
+  <div id="eval-rating" style="font-size:22px;margin-bottom:8px;padding-bottom:10px;border-bottom:1px solid var(--border)"></div>
+  <div id="eval-comment" style="font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap"></div>
+</div>
+
+<!-- 評価履歴 -->
+<div style="margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">評価履歴</div>
+    <button onclick="clearEvalHistory()" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">全削除</button>
+  </div>
+  <div id="eval-history-list"></div>
+</div>
+```
+
   </div><div class="panel" id="panel-eq" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--green-dark);padding:12px 14px 20px;overflow-y:auto;z-index:10;display:none">
   <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px;margin-bottom:12px">EQUITY CALCULATOR</div>
 
   <!-- Hero hand -->
+
   <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
     <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">★ ヒーローのハンド (2枚)</div>
     <div onclick="openEqPicker('hero')" style="display:flex;gap:8px;align-items:center;cursor:pointer;min-height:54px">
@@ -522,6 +560,7 @@ button:active{transform:scale(0.94);opacity:0.85}
   </div>
 
   <!-- Villain -->
+
   <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">相手</div>
@@ -552,6 +591,7 @@ button:active{transform:scale(0.94);opacity:0.85}
   </div>
 
   <!-- Board -->
+
   <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
     <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:8px">ボード (0〜5枚)</div>
     <div onclick="openEqPicker('board')" style="display:flex;gap:6px;align-items:center;cursor:pointer;min-height:54px;flex-wrap:wrap">
@@ -565,12 +605,13 @@ button:active{transform:scale(0.94);opacity:0.85}
     </div>
   </div>
 
-  <button onclick="calculateEquity()" id="eq-calc-btn"
-    style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:none;margin-bottom:14px">
-    ♠ エクイティを計算する
-  </button>
+<button onclick="calculateEquity()" id="eq-calc-btn"
+style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:none;margin-bottom:14px">
+♠ エクイティを計算する
+</button>
 
   <!-- Results -->
+
   <div id="eq-results" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:16px">
     <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:12px">計算結果 (5,000試行)</div>
     <div style="position:relative;height:28px;border-radius:8px;overflow:hidden;margin-bottom:8px;background:#111">
@@ -598,9 +639,8 @@ button:active{transform:scale(0.94);opacity:0.85}
 
 </div>
 
-
-
 <!-- ── Equity Panel ── -->
+
 <div id="card-picker-overlay" onclick="closeCardPicker()" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;opacity:0;pointer-events:none;transition:opacity .2s;display:flex;flex-direction:column;justify-content:flex-end">
   <div onclick="event.stopPropagation()" style="background:#0d1f0d;border-top:1.5px solid var(--gold-dim);border-radius:18px 18px 0 0;padding:14px 12px 24px;max-height:88vh;overflow-y:auto">
     <div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 12px"></div>
@@ -619,6 +659,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 </div>
 
 <!-- Hand Detail Modal -->
+
 <div id="hand-modal-overlay" onclick="closeHandModal()" style="position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:200;opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:center;justify-content:center">
   <div id="hand-modal" onclick="event.stopPropagation()" style="width:82%;max-width:320px;background:#0d1f0d;border:1.5px solid var(--gold-dim);border-radius:16px;padding:20px;transform:scale(0.85);transition:transform .2s">
     <div style="text-align:center;margin-bottom:16px">
@@ -639,6 +680,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 </div>
 
 <!-- Exploit Advice Modal -->
+
 <div id="exploit-overlay" onclick="closeExploitModal()" style="position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;opacity:0;pointer-events:none;transition:opacity .2s;display:flex;align-items:flex-end;justify-content:center">
   <div id="exploit-modal" onclick="event.stopPropagation()" style="width:100%;max-width:480px;background:#0d1f0d;border-top:2px solid #c9a227;border-radius:18px 18px 0 0;padding:16px 16px 32px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:85vh;overflow-y:auto">
     <div style="width:36px;height:4px;background:#2a4a2a;border-radius:2px;margin:0 auto 14px"></div>
@@ -662,7 +704,10 @@ button:active{transform:scale(0.94);opacity:0.85}
   <!-- Tag section -->
   <div class="sheet-section">タグ選択</div>
   <div class="sheet-tags" id="sheet-tags"></div>
+  <!-- Done button -->
+  <button onclick="closeSheet()" style="width:100%;padding:11px;border-radius:8px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:none;margin-bottom:10px">✓ 完了</button>
   <!-- Save as player -->
+  <div style="font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px">プレイヤー帳に保存（任意）</div>
   <div class="save-row">
     <input class="save-input" id="player-name-input" placeholder="プレイヤー名を入力..." maxlength="20">
     <button class="save-btn" onclick="savePlayer()">💾 保存</button>
@@ -2026,14 +2071,28 @@ function setRake(r){
 
 function setTableSize(n){
   const currentPos=heroPos();
+  const oldPositions=pos(); // 変更前のポジション配列
+  const oldProfiles={...state.seatProfiles};
+
   state.tableSize=n;
-  state.seatProfiles={};
-  closeSheet();
   const newIdx=POSITIONS_MAP[n].indexOf(currentPos);
   state.heroIdx=newIdx>=0?newIdx:0;
+
+  // ポジション名でプロフィールをリマップ
+  const newProfiles={};
+  POSITIONS_MAP[n].forEach((posName,newI)=>{
+    const oldI=oldPositions.indexOf(posName);
+    if(oldI>=0&&oldProfiles[oldI]){
+      newProfiles[newI]=oldProfiles[oldI];
+    }
+  });
+  state.seatProfiles=newProfiles;
+
+  closeSheet();
   document.querySelectorAll('.size-btn').forEach((b,i)=>{b.classList.toggle('active',[6,7,8,9][i]===n)});
-  // 人数変更でポジションが変わるためactionLogをリセット
-  if(actionLog.length>1){ // Preflop以外のアクションがある場合
+
+  // actionLogはポジションが変わる可能性があるためリセット
+  if(actionLog.length>1){
     actionLog=[{type:'street',street:'preflop',label:STREET_LABELS['preflop']}];
     currentStreet='preflop';
   }
@@ -2311,7 +2370,7 @@ function switchTab(tab){
   }
   if(tab==='range'){renderPosBtns();renderMatrix();}
   if(tab==='book'){renderBookTagBtns();renderBookList();}
-  if(tab==='log'){renderVillainStacks();renderLogPosBtns();}
+  if(tab==='log'){renderVillainStacks();renderLogPosBtns();renderEvalHistory();}
   if(tab==='eq'){refreshEqDisplays();}
 }
 
@@ -3040,17 +3099,33 @@ async function evaluatePlay(){
   }
 
   const btn=document.getElementById('eval-btn');
-  btn.textContent='評価中...';btn.disabled=true;btn.style.opacity='0.6';
+  btn.innerHTML='<span class="eval-spinner"></span>評価中...';btn.disabled=true;btn.style.opacity='0.8';
 
   let tableCtx='',actionStr='',prompt='';
   try{
     tableCtx=buildTableContext();
     actionStr=buildActionString();
-    prompt=`ポーカーコーチとして評価。\n手: ${hand}${board?' ボード:'+board:''}\nスタック: ${stack} ストリート: ${street}\n${tableCtx}\nアクション: ${actionStr}\n${question?'質問: '+question:''}\n\n以下の形式のみで回答:\n評価: ★X\n一言: 10文字以内\nコメント: 100文字以内`;
+    prompt=`以下のポーカーハンドを評価してください。
+
+【ハンド情報】
+手: ${hand}${board?'\nボード: '+board:''}
+スタック: ${stack} / ストリート: ${street}
+
+【テーブル状況】
+${tableCtx}
+
+【アクション経緯】
+${actionStr}
+${question?'\n【質問】\n'+question:''}
+
+以下の形式で必ず回答してください（形式を崩さないこと）:
+評価: ★★★★★（1〜5個）
+一言: 10文字以内の核心
+コメント: 対戦相手のプロフィール（タイト/ルース/ステーションなど）を必ず考慮した上で、このハンドの判断を200文字以内で評価してください。良い点・改善点・相手特性に基づく推奨アクションを含めてください。`;
   }catch(buildErr){
     document.getElementById('eval-result').style.display='block';
     document.getElementById('eval-comment').textContent='プロンプト生成エラー: '+buildErr.message;
-    btn.textContent='AIに評価してもらう';btn.disabled=false;btn.style.opacity='1';
+    btn.innerHTML='AIに評価してもらう';btn.disabled=false;btn.style.opacity='1';
     return;
   }
 
@@ -3065,7 +3140,7 @@ async function evaluatePlay(){
       body:JSON.stringify({
         model:'claude-sonnet-4-6',
         max_tokens:1000,
-        system:'テキサスホールデムのプロコーチ。日本語で簡潔に。',
+        system:'あなたはテキサスホールデムのプロコーチです。対戦相手のプロフィール（タイト/ルース/アグレッシブ/パッシブ/ステーション/フォールダーなど）を必ず考慮した実戦的なアドバイスを日本語で提供してください。フォーマットを厳守してください。',
         messages:[{role:'user',content:prompt}]
       })
     });
@@ -3100,12 +3175,24 @@ async function evaluatePlay(){
       `<div style="font-size:13px;font-weight:700;color:${starColor};margin-top:4px">${oneline}</div>`;
     document.getElementById('eval-comment').textContent=comment;
 
+    // 履歴に保存
+    addEvalHistory({
+      ts:Date.now(),
+      hand:hand,
+      board:getBoardString(),
+      street,
+      action:buildActionString(),
+      rating,
+      oneline,
+      comment
+    });
+
   }catch(e){
     document.getElementById('eval-result').style.display='block';
     document.getElementById('eval-comment').textContent=
       e.name==='AbortError'?'タイムアウト（15秒）: Edge Functionに到達できていません':`接続エラー: ${e.message}`;
   }finally{
-    btn.textContent='AIに評価してもらう';btn.disabled=false;btn.style.opacity='1';
+    btn.innerHTML='AIに評価してもらう';btn.disabled=false;btn.style.opacity='1';
   }
 }
 
@@ -3537,6 +3624,82 @@ document.addEventListener('touchstart', e=>{
 
   showOnboarding();
 })();
+
+function shareToX(){
+  const rating=document.getElementById('eval-rating')?.innerText||'';
+  const comment=document.getElementById('eval-comment')?.textContent||'';
+  const hand=getHandString();
+  const board=getBoardString();
+
+  // ツイート文章（140文字以内に収める）
+  const handStr=hand!=='（未選択）'?`🃏 ${hand}`:'';
+  const boardStr=board?` | Board: ${board}`:'';
+  const ratingLine=rating.split('\n')[0]||''; // 星のみ
+  const oneline=rating.split('\n')[1]||'';
+
+  // コメントは70文字まで
+  const shortComment=comment.length>70?comment.slice(0,69)+'…':comment;
+
+  const text=`${handStr}${boardStr}\n${ratingLine} ${oneline}\n\n${shortComment}\n\n#Ringdom #ポーカー #テキサスホールデム\nhttps://ringdom.vercel.app`;
+
+  const url='https://x.com/intent/tweet?text='+encodeURIComponent(text);
+  window.open(url,'_blank');
+}
+function loadEvalHistory(){
+  try{return JSON.parse(localStorage.getItem('ringdom_eval_history')||'[]');}catch{return[];}
+}
+function saveEvalHistory(h){
+  try{localStorage.setItem('ringdom_eval_history',JSON.stringify(h));}catch{}
+}
+function addEvalHistory(entry){
+  const h=loadEvalHistory();
+  h.unshift(entry); // 新しいものを先頭に
+  if(h.length>50) h.pop(); // 最大50件
+  saveEvalHistory(h);
+  renderEvalHistory();
+}
+function deleteEvalHistory(idx){
+  const h=loadEvalHistory();
+  h.splice(idx,1);
+  saveEvalHistory(h);
+  renderEvalHistory();
+}
+function clearEvalHistory(){
+  saveEvalHistory([]);
+  renderEvalHistory();
+}
+function renderEvalHistory(){
+  const el=document.getElementById('eval-history-list');
+  if(!el) return;
+  const h=loadEvalHistory();
+  if(h.length===0){
+    el.innerHTML=`<div style="font-size:11px;color:var(--text-muted);text-align:center;padding:16px 0">履歴はありません</div>`;
+    return;
+  }
+  el.innerHTML=h.map((e,i)=>{
+    const starCount=(e.rating.match(/★/g)||[]).length;
+    const starColor=starCount>=4?'#4ade80':starCount===3?'#FBBF24':'#f87171';
+    const date=new Date(e.ts);
+    const dateStr=`${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2,'0')}`;
+    return`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:10px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:15px">${e.rating}</span>
+          <span style="font-size:11px;font-weight:700;color:${starColor}">${e.oneline}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:9px;color:var(--text-muted)">${dateStr}</span>
+          <button onclick="deleteEvalHistory(${i})" style="font-size:10px;padding:2px 6px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">✕</button>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--gold);margin-bottom:4px">
+        ${e.hand}${e.board?' / '+e.board:''} — ${e.street}
+      </div>
+      <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;line-height:1.6;white-space:pre-wrap">${e.action}</div>
+      <div style="font-size:11px;color:var(--text);line-height:1.7;padding-top:6px;border-top:1px solid var(--border)">${e.comment}</div>
+    </div>`;
+  }).join('');
+}
 
 function renderAll(){
   renderTable();renderHeroBar();renderSeatList();renderPosBtns();renderLogPosBtns();updateExploitButton();
