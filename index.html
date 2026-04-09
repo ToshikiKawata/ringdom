@@ -112,7 +112,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 .size-btns{display:flex;gap:5px}
 .size-btn{padding:5px 10px;border-radius:4px;font-size:11px;font-weight:700;border:1px solid var(--border2);background:transparent;color:var(--text-dim);cursor:pointer;font-family:inherit}
 .size-btn.active{background:var(--gold);color:#0a1a0a;border-color:var(--gold)}
-.tabbar{display:flex;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabbar{display:flex;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)}
 .tab{flex:1;padding:10px 4px;text-align:center;font-size:10px;font-weight:700;letter-spacing:0.5px;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap;overflow:hidden}
 .tab.active{color:var(--gold);border-bottom-color:var(--gold)}
 .content{flex:1;overflow:hidden;position:relative}
@@ -2734,33 +2734,6 @@ function setAbSize(multiplier){
   const size=(estPot*parseFloat(multiplier)).toFixed(1);
   const inp=document.getElementById('ab-size');
   if(inp) inp.value=size;
-}
-
-function addAction(){
-  const player=document.getElementById('ab-player')?.value||'';
-  const action=document.getElementById('ab-action')?.value||'';
-  const sizeEl=document.getElementById('ab-size');
-  const size=sizeEl?.value||'';
-  const needsSize=action==='bet'||action==='raise'||action==='3bet';
-
-  // 自動挿入: 前にアクションすべきプレイヤーを補完
-  const autoChecks=getAutoChecks(player);
-  autoChecks.forEach(p=>{
-    actionLog.push({type:'action',player:p,action:'check',size:'',auto:true});
-  });
-  const autoFolds=getAutoFolds(player);
-  // ポストフロップでautoChecksがある場合はfoldしない（チェック済み）
-  const foldTargets=autoFolds.filter(p=>!autoChecks.includes(p));
-  foldTargets.forEach(p=>{
-    actionLog.push({type:'action',player:p,action:'fold',size:'',auto:true});
-  });
-
-  actionLog.push({type:'action',player,action,size:needsSize?size:'',auto:false});
-  if(sizeEl) sizeEl.value='';
-  renderAbPlayerSelect();
-  renderActionSelect(document.getElementById('ab-player')?.value||'');
-  renderActionLog();
-  updateEvalBtn();
 }
 
 function deleteAction(idx){
