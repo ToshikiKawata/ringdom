@@ -2590,8 +2590,8 @@ function postFlopOrder(){
 // 現ストリートでまだアクションしていないアクティブプレイヤー取得
 function getUnarctedThisStreet(){
   const active=new Set(getActivePlayers());
-  let inCurrent=false;
   const actedThisStreet=new Set();
+  let inCurrent=false;
   for(const e of actionLog){
     if(e.type==='street') inCurrent=(e.street===currentStreet);
     if(inCurrent&&e.type==='action') actedThisStreet.add(e.player);
@@ -2599,32 +2599,48 @@ function getUnarctedThisStreet(){
   return [...active].filter(p=>!actedThisStreet.has(p));
 }
 
+// 現ストリートの最後のアグレッシブアクション以降に未アクションのプレイヤー
+function getUnactedAfterLastAggr(){
+  const acts=getStreetActions();
+  let lastAggrIdx=-1;
+  for(let i=acts.length-1;i>=0;i--){
+    if(['bet','raise','3bet','allin'].includes(acts[i].action)){lastAggrIdx=i;break;}
+  }
+  if(lastAggrIdx<0) return new Set();
+  const aggrPlayer=acts[lastAggrIdx].player;
+  const actedAfter=new Set(acts.slice(lastAggrIdx+1).map(e=>e.player));
+  const active=new Set(getActivePlayers());
+  // アグレッサー自身は除く
+  const result=new Set();
+  for(const p of active){
+    if(p!==aggrPlayer&&!actedAfter.has(p)) result.add(p);
+  }
+  return result;
+}
+
 function getAutoFolds(currentPlayer){
   const order=currentStreet==='preflop'?preflopOrder():postFlopOrder();
   const curIdx=order.indexOf(currentPlayer);
   if(curIdx<0) return [];
 
-  if(currentStreet==='preflop'){
-    const unacted=getUnarctedThisStreet();
-    return order.slice(0,curIdx).filter(p=>unacted.includes(p));
-  }
-
-  // ポストフロップ：ベットがある場合、チェック済みも含めて「再アクション必要」
   const acts=getStreetActions();
   const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
-  if(!hasAggressive) return []; // ベットなし→チェックに任せる
 
-  // ベットがある場合：ベット以降にまだアクションしていないプレイヤーを自動フォールド
-  // ベットのインデックスを探す
-  let betIdx=-1;
-  for(let i=acts.length-1;i>=0;i--){
-    if(['bet','raise','3bet'].includes(acts[i].action)){betIdx=i;break;}
+  if(currentStreet==='preflop'){
+    if(!hasAggressive){
+      // レイズなし：currentPlayerより前で未アクションの人を自動フォールド
+      const unacted=getUnarctedThisStreet();
+      return order.slice(0,curIdx).filter(p=>unacted.includes(p)&&p!=='BB');
+    }
+    // レイズあり：アグレッサー以降でcurrentPlayerより前の未アクション
+    const unactedAfter=[...getUnactedAfterLastAggr()];
+    return order.slice(0,curIdx).filter(p=>unactedAfter.includes(p));
   }
-  const actedAfterBet=new Set(acts.slice(betIdx+1).map(e=>e.player));
-  const active=new Set(getActivePlayers());
 
-  // currentPlayerより前の順番で、ベット後にまだアクションしていないアクティブプレイヤー
-  return order.slice(0,curIdx).filter(p=>active.has(p)&&!actedAfterBet.has(p)&&p!==acts[betIdx]?.player);
+  // ポストフロップ
+  if(!hasAggressive) return []; // ベットなし→自動フォールドなし
+  const unactedAfter=[...getUnactedAfterLastAggr()];
+  return order.slice(0,curIdx).filter(p=>unactedAfter.includes(p));
 }
 
 function getAutoChecks(currentPlayer){
@@ -2632,6 +2648,7 @@ function getAutoChecks(currentPlayer){
   const acts=getStreetActions();
   const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
   if(hasAggressive) return [];
+  // ベットなし：currentPlayerより前で未アクション→自動チェック
   const order=postFlopOrder();
   const unacted=getUnarctedThisStreet();
   const curIdx=order.indexOf(currentPlayer);
@@ -2664,10 +2681,14 @@ function addStreetDivider(street){
   const existing=actionLog.filter(e=>e.type==='street').map(e=>e.street);
   if(existing.includes(street)) return;
 
-  // 現ストリートでまだアクションしていないプレイヤーを自動フォールド
+  // ポストフロップ間の移動：未アクションプレイヤーは自動チェック
+  // （ベットがなければ全員チェックでストリート終了が自然）
   const unacted=getUnarctedThisStreet();
+  const hasAggressive=getStreetActions().some(e=>['bet','raise','3bet','allin'].includes(e.action));
   unacted.forEach(p=>{
-    actionLog.push({type:'action',player:p,action:'fold',size:'',auto:true});
+    // ベットがある場合は自動フォールド、ない場合は自動チェック
+    const autoAction=hasAggressive?'fold':'check';
+    actionLog.push({type:'action',player:p,action:autoAction,size:'',auto:true});
   });
 
   currentStreet=street;
@@ -2684,23 +2705,48 @@ function updateStreetBtns(){
   const row=document.getElementById('next-street-row');
   if(!row) return;
 
-  // 次に追加できるストリートを計算（順番通り、未追加のもの）
   const nextStreets=order.filter(s=>!existing.includes(s));
+  if(nextStreets.length===0){row.innerHTML='';return;}
 
-  if(nextStreets.length===0){
-    row.innerHTML='';
-    return;
+  // 前のストリートに手動アクションが最低1つあるか確認
+  function streetHasAction(street){
+    let inStreet=false;
+    for(const e of actionLog){
+      if(e.type==='street') inStreet=(e.street===street);
+      if(inStreet&&e.type==='action'&&!e.auto) return true;
+    }
+    return false;
   }
 
-  // 最初の1つだけ表示 or 全部表示（最初の未追加から順に）
+  // 各ストリートボタンの有効/無効を判定
+  // preflop手動アクションがなければflop不可
+  // flop手動アクション（またはpreflop完了）がなければturn不可、等
+  const prevStreet={flop:'preflop',turn:'flop',river:'turn'};
+
+  // 前のストリートに手動アクションが最低1つあるか、
+  // またはすでにそのストリート以降に進んでいるか確認
+  function canProceedTo(street){
+    const prev=prevStreet[street];
+    if(!prev) return true;
+    const order2=['preflop','flop','turn','river'];
+    const alreadyPast=existing.some(s=>order2.indexOf(s)>order2.indexOf(prev));
+    if(!streetHasAction(prev)&&!alreadyPast) return false;
+    // アクティブプレイヤーが2人未満（全員フォールド）なら不可
+    if(getActivePlayers().length<2) return false;
+    return true;
+  }
+
   const btns=nextStreets.map(s=>{
     const isNext=s===nextStreets[0];
-    return`<button onclick="addStreetDivider('${s}')"
-      style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;
-      background:${isNext?'var(--surface3)':'transparent'};
-      color:${isNext?'var(--text)':'var(--text-muted)'};
-      border:1px solid ${isNext?'var(--border2)':'var(--border)'};
-      opacity:${isNext?'1':'0.4'}">
+    const enabled=canProceedTo(s);
+    return`<button
+      ${enabled?`onclick="addStreetDivider('${s}')"`:``}
+      style="padding:7px 16px;border-radius:6px;font-size:11px;font-weight:700;font-family:inherit;
+      cursor:${enabled?'pointer':'not-allowed'};
+      background:${isNext&&enabled?'var(--surface3)':'transparent'};
+      color:${enabled?'var(--text)':'var(--text-muted)'};
+      border:1px solid ${isNext&&enabled?'var(--border2)':'var(--border)'};
+      opacity:${enabled?'1':'0.3'}">
       + ${labels[s]}
     </button>`;
   }).join('');
@@ -2815,9 +2861,19 @@ function clearActions(){
 }
 
 function isStreetOver(){
-  // All-inがこのストリートにあれば終了
   const acts=getStreetActions();
-  return acts.some(e=>e.action==='allin');
+  if(!acts.some(e=>e.action==='allin')) return false;
+  // All-in後、全アクティブプレイヤーがアクション済みなら終了
+  const active=getActivePlayers();
+  const actedPlayers=new Set(acts.map(e=>e.player));
+  // All-inしたプレイヤー以外で未アクションがいればまだ終わっていない
+  const allinPlayer=acts.find(e=>e.action==='allin')?.player;
+  const unacted=active.filter(p=>p!==allinPlayer&&!actedPlayers.has(p));
+  // All-in後にアクションすべき人を確認（All-inより後の順番）
+  const order=currentStreet==='preflop'?preflopOrder():postFlopOrder();
+  const allinIdx=order.indexOf(allinPlayer);
+  const needAction=order.filter((p,i)=>i>allinIdx&&active.includes(p)&&!acts.slice(acts.findIndex(e=>e.action==='allin')+1).map(e=>e.player).includes(p));
+  return needAction.length===0;
 }
 
 function addAction(){
@@ -2825,33 +2881,36 @@ function addAction(){
   const action=document.getElementById('ab-action')?.value||'';
   if(!player||!action) return;
 
-  // All-in後は追加不可
-  if(isStreetOver()){
-    return;
-  }
+  if(isStreetOver()) return;
 
-  // 同じプレイヤーが既にこのストリートでアクション済みかチェック
-  // （プリフロップは例外：レイズ後にBBが再アクションできる）
   const acts=getStreetActions();
   const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
-  const alreadyActed=acts.filter(e=>!e.auto).some(e=>e.player===player);
-  if(alreadyActed&&!hasAggressive&&currentStreet!=='preflop'){
-    // ポストフロップでベットなし、かつ既にアクション済み→追加不可
-    return;
+
+  // 既にこのストリートでアクション済みのプレイヤーは追加不可
+  // 例外: ベット/レイズがある場合は再アクション可能
+  const actedPlayers=new Set(acts.map(e=>e.player));
+  if(actedPlayers.has(player)&&!hasAggressive){
+    return; // ベットなし・既アクション済み→不可
+  }
+  // ベットあり・アグレッサー以降に既にアクション済みなら不可
+  if(hasAggressive){
+    const unactedAfter=getUnactedAfterLastAggr();
+    if(!unactedAfter.has(player)) return;
   }
 
   const sizeEl=document.getElementById('ab-size');
   const size=sizeEl?.value||'';
   const needsSize=action==='bet'||action==='raise'||action==='3bet';
 
-  // 自動挿入
-  const autoChecks=getAutoChecks(player);
+  // 自動挿入（既にアクション済みのプレイヤーは除外）
+  const alreadyInLog=new Set(getStreetActions().map(e=>e.player));
+  const autoChecks=getAutoChecks(player).filter(p=>!alreadyInLog.has(p));
+  const autoFolds=getAutoFolds(player).filter(p=>!alreadyInLog.has(p)&&!autoChecks.includes(p));
+
   autoChecks.forEach(p=>{
     actionLog.push({type:'action',player:p,action:'check',size:'',auto:true});
   });
-  const autoFolds=getAutoFolds(player);
-  const foldTargets=autoFolds.filter(p=>!autoChecks.includes(p));
-  foldTargets.forEach(p=>{
+  autoFolds.forEach(p=>{
     actionLog.push({type:'action',player:p,action:'fold',size:'',auto:true});
   });
 
@@ -2859,6 +2918,7 @@ function addAction(){
   if(sizeEl) sizeEl.value='';
   renderAbPlayerSelect();
   renderActionSelect(document.getElementById('ab-player')?.value||'');
+  updateStreetBtns();
   renderActionLog();
   updateEvalBtn();
 }
@@ -3654,16 +3714,35 @@ function shareToX(){
   const hand=getHandString();
   const board=getBoardString();
 
-  // ツイート文章（140文字以内に収める）
+  // アクション経緯を要約（ストリート + アクションのみ・AUTO除く）
+  const actionLines=actionLog
+    .filter(e=>e.type==='street'||(e.type==='action'&&!e.auto))
+    .map(e=>{
+      if(e.type==='street') return e.label;
+      const isHero=e.player===heroPos();
+      const aLabel=ACTION_LABELS[e.action]||e.action;
+      const size=e.size?` ${e.size}bb`:'';
+      return`${isHero?'Hero':e.player}: ${aLabel}${size}`;
+    });
+  const actionStr=actionLines.join(' / ');
+  const shortAction=actionStr.length>60?actionStr.slice(0,59)+'…':actionStr;
+
   const handStr=hand!=='（未選択）'?`🃏 ${hand}`:'';
   const boardStr=board?` | Board: ${board}`:'';
-  const ratingLine=rating.split('\n')[0]||''; // 星のみ
+  const ratingLine=rating.split('\n')[0]||'';
   const oneline=rating.split('\n')[1]||'';
+  const shortComment=comment.length>50?comment.slice(0,49)+'…':comment;
 
-  // コメントは70文字まで
-  const shortComment=comment.length>70?comment.slice(0,69)+'…':comment;
-
-  const text=`${handStr}${boardStr}\n${ratingLine} ${oneline}\n\n${shortComment}\n\n#Ringdom #ポーカー #テキサスホールデム\nhttps://ringdom.vercel.app`;
+  const text=[
+    `${handStr}${boardStr}`,
+    shortAction?`📋 ${shortAction}`:'',
+    `${ratingLine} ${oneline}`,
+    '',
+    shortComment,
+    '',
+    '#Ringdom #ポーカー',
+    'https://ringdom.vercel.app'
+  ].filter(Boolean).join('\n');
 
   const url='https://x.com/intent/tweet?text='+encodeURIComponent(text);
   window.open(url,'_blank');
