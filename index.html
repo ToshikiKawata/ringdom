@@ -272,26 +272,35 @@ button:active{transform:scale(0.94);opacity:0.85}
 
 <!-- Slide 2 -->
 <div class="ob-slide" id="ob-slide-2" style="transform:translateX(100%)">
-  <div style="padding:24px 24px 0;text-align:center">
-    <div style="font-size:13px;color:#c9a227;letter-spacing:2px;font-weight:700;margin-bottom:16px">さあ始めよう</div>
+  <div style="padding:40px 28px 0;text-align:center">
+    <div style="font-size:13px;color:#c9a227;letter-spacing:2px;font-weight:700;margin-bottom:20px">最初の一歩</div>
 
-    <div style="font-size:17px;font-weight:700;color:#e8f0e8;line-height:1.6;margin-bottom:20px">
-      まず自分の席を<br>ダブルタップして始めよう
+    <div style="font-size:22px;font-weight:800;color:#e8f0e8;line-height:1.5;margin-bottom:32px">
+      自分の席を<br><span style="color:#c9a227">ダブルタップ</span>して<br>スタート
     </div>
 
-    <div style="background:#0d1a0d;border:1px solid #1a4a1a;border-radius:12px;padding:14px;margin-bottom:10px;text-align:left">
-      <div style="font-size:11px;color:#4ade80;font-weight:700;margin-bottom:4px">セッション前に</div>
-      <div style="font-size:11px;color:#a0c0a0;line-height:1.7">相手をテーブルタブに登録して<br>卓に座る前に答えを持っておく</div>
-    </div>
-
-    <div style="background:#0d1a2a;border:1px solid #1a3a5a;border-radius:12px;padding:14px;margin-bottom:10px;text-align:left">
-      <div style="font-size:11px;color:#60A5FA;font-weight:700;margin-bottom:4px">セッション後に</div>
-      <div style="font-size:11px;color:#a0b0c0;line-height:1.7">気になったハンドをLOGに記録して<br>AIコーチに振り返りを依頼する</div>
-    </div>
-
-    <div style="background:#1a1200;border:1px solid #3a2a00;border-radius:12px;padding:14px;text-align:left">
-      <div style="font-size:11px;color:#c9a227;font-weight:700;margin-bottom:4px">よく会う相手は</div>
-      <div style="font-size:11px;color:#b0a080;line-height:1.7">Playersタブに保存して<br>次回セッションですぐ呼び出し</div>
+    <div style="display:flex;flex-direction:column;gap:12px;text-align:left">
+      <div style="display:flex;align-items:center;gap:14px;background:#0d1f0d;border-radius:12px;padding:14px">
+        <div style="font-size:24px;flex-shrink:0">👆</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#e8f0e8;margin-bottom:3px">ダブルタップ</div>
+          <div style="font-size:11px;color:#7a9a7a;line-height:1.6">自分のポジション（Hero）を設定</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;background:#0d1f0d;border-radius:12px;padding:14px">
+        <div style="font-size:24px;flex-shrink:0">🎯</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#e8f0e8;margin-bottom:3px">シングルタップ</div>
+          <div style="font-size:11px;color:#7a9a7a;line-height:1.6">相手の席をタップして特徴を登録</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;background:#0d1f0d;border-radius:12px;padding:14px">
+        <div style="font-size:24px;flex-shrink:0">⚡</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#e8f0e8;margin-bottom:3px">EXPLOITボタン</div>
+          <div style="font-size:11px;color:#7a9a7a;line-height:1.6">誰を・どう搾取するか即座に確認</div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1246,10 +1255,13 @@ function renderHeroBar(){
   });
   const impliedItems=(impliedMult&&impliedMult>1.01)?
     [`<div class="adj-item"><span class="adj-tag" style="color:#60A5FA">[コーラー多]</span> 投機ハンド(SC/小ペア/A-suited)拡大 <span style="color:#4ade80">(×${impliedMult.toFixed(2)})</span></div>`]:[];
+
+  // バナーはプレイヤー特性補正がある時のみ表示
+  // （人数・レーキ・スタック単独では出さない）
+  const playerAdjItems=[...impliedItems,...adjItems];
   const allItems=[...sizeItems,...stackItems,...impliedItems,...rakeItems,...adjItems];
-  if(allItems.length>0){
+  if(playerAdjItems.length>0){
     al.style.display='block';
-    // 3件以上は折りたたむ
     const showAll=al.dataset.expanded==='1';
     const visible=showAll?allItems:allItems.slice(0,3);
     const more=allItems.length-3;
@@ -2178,12 +2190,13 @@ function getRelativeDist(heroIdx,targetIdx){
 }
 
 function updateExploitButton(){
-  const count=countProfiledSeats();
+  // Hero以外のプレイヤーに1人以上プロフィールが入力された時のみ表示
+  const p=pos();
+  const hasVillainProfile=p.some((_,i)=>i!==state.heroIdx&&hasProfile(i));
   const btn=document.getElementById('exploit-btn-g');
   const none=document.getElementById('exploit-btn-none');
-  const show=count>=2; // 2人以上プロフィール入力でボタン表示
-  if(btn) btn.style.display=show?'block':'none';
-  if(none) none.style.display=show?'none':'block';
+  if(btn) btn.style.display=hasVillainProfile?'block':'none';
+  if(none) none.style.display=hasVillainProfile?'none':'block';
 }
 
 function buildTableSummary(){
