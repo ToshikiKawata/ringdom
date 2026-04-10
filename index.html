@@ -2725,15 +2725,18 @@ function updateStreetBtns(){
   // 前のストリートに手動アクションが最低1つあるか、
   // またはすでにそのストリート以降に進んでいるか確認
   function canProceedTo(street){
-    const prev=prevStreet[street];
-    if(!prev) return true;
-    const order2=['preflop','flop','turn','river'];
-    const alreadyPast=existing.some(s=>order2.indexOf(s)>order2.indexOf(prev));
-    if(!streetHasAction(prev)&&!alreadyPast) return false;
-    // アクティブプレイヤーが2人未満（全員フォールド）なら不可
-    if(getActivePlayers().length<2) return false;
-    return true;
-  }
+  const prev=prevStreet[street];
+  if(!prev) return true;
+  const order2=['preflop','flop','turn','river'];
+  const alreadyPast=existing.some(s=>order2.indexOf(s)>order2.indexOf(prev));
+  if(!streetHasAction(prev)&&!alreadyPast) return false;
+  if(getActivePlayers().length<2) return false;
+  // ← ここを追加: レイズ後に未アクションのプレイヤーがいたらブロック
+  const acts=getStreetActions();
+  const hasAggr=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
+  if(hasAggr&&getUnactedAfterLastAggr().size>0) return false;
+  return true;
+}
 
   const btns=nextStreets.map(s=>{
     const isNext=s===nextStreets[0];
