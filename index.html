@@ -3716,93 +3716,57 @@ async function shareAsImage(){
   const hand=getHandString();
   const board=getBoardString();
 
-  // アクション経緯（手動のみ）
   const lines=actionLog.map(e=>{
     if(e.type==='street') return{type:'street',text:e.label};
-    if(e.auto) return{type:'auto',text:''};
+    if(e.auto) return null;
     const isHero=e.player===heroPos();
     const aLabel=ACTION_LABELS[e.action]||e.action;
     const size=e.size?` ${e.size}bb`:'';
     return{type:'action',isHero,text:`${isHero?'Hero('+e.player+')':e.player}: ${aLabel}${size}`};
-  }).filter(e=>e.text);
+  }).filter(Boolean);
 
-  // Canvas描画
   const W=600,PAD=32;
+  const CW=52,CH=72,CGAP=8;
+  const lineH=26;
+
+  // 一時canvasでwrapText用
+  const tmp=document.createElement('canvas');
+  const tc=tmp.getContext('2d');
+  tc.font='13px Arial,sans-serif';
+  function wrapT(text,maxW){
+    const chars=text.split('');
+    const ls=[];let cur='';
+    for(const ch of chars){
+      const t=cur+ch;
+      if(tc.measureText(t).width>maxW&&cur){ls.push(cur);cur=ch;}else cur=t;
+    }
+    if(cur)ls.push(cur);
+    return ls;
+  }
+  const commentLines=wrapT(comment,W-PAD*2);
+
+  function parseCards(str){
+    if(!str||str==='（未選択）')return[];
+    return str.split(' ').filter(Boolean);
+  }
+  const handCards=parseCards(hand);
+  const boardCards2=parseCards(board);
+
+  // 高さ計算
+  const headerH=60;
+  const cardRowH=CH+20;
+  const hasBoard=boardCards2.length>0;
+  const actionH=lines.length*lineH+40;
+  const commentH=commentLines.length*20+80;
+  const totalH=headerH+cardRowH+(hasBoard?cardRowH:0)+actionH+commentH+60;
+
   const canvas=document.createElement('canvas');
+  canvas.width=W;
+  canvas.height=totalH;
   const ctx=canvas.getContext('2d');
 
-  // 高さを事前計算（カード描画後に再計算するため暫定値）
-  const lineH=26;
-  const sectionH=36;
-  const headerH=100;
-  const commentLines=wrapText(ctx,comment,W-PAD*2,15);
-
-  canvas.width=W;
-  canvas.height=800; // 暫定。カード描画関数内で再設定
-  ctx.clearRect(0,0,W,800);
-
-  // 背景
-  ctx.fillStyle='#071507';
-  ctx.fillRect(0,0,W,totalH);
-
-  // 上部ゴールドライン
-  ctx.fillStyle='#c9a227';
-  ctx.fillRect(0,0,W,3);
-
-  let y=32;
-
-  // ヘッダー
-  ctx.fillStyle='#c9a227';
-  ctx.font='bold 22px Arial,sans-serif';
-  ctx.fillText('♠ RINGDOM',PAD,y);
-  ctx.fillStyle='#3a5a3a';
-  ctx.font='11px Arial,sans-serif';
-  ctx.fillText('β版',W-PAD-30,y);
-  y+=36;
-
-  // カード描画ヘルパー
-  function drawCard(ctx,cardStr,x,y,w,h){
-    if(!cardStr){
-      // 空カード
-      ctx.strokeStyle='#2a4a2a';
-      ctx.lineWidth=1.5;
-      roundRect(ctx,x,y,w,h,6);
-      ctx.stroke();
-      return;
-    }
-    const rank=cardStr.slice(0,-1);
-    const suitKey=cardStr.slice(-1);
-    const suitMap={s:{sym:'♠',color:'#1a1a2e'},h:{sym:'♥',color:'#cc2200'},d:{sym:'♦',color:'#cc2200'},c:{sym:'♣',color:'#1a1a2e'}};
-    const suit=suitMap[suitKey]||{sym:'?',color:'#888'};
-
-    // カード背景
-    ctx.fillStyle='#f5f0e8';
-    roundRect(ctx,x,y,w,h,6);
-    ctx.fill();
-    // 枠線
-    ctx.strokeStyle='#ccc';
-    ctx.lineWidth=1;
-    ctx.stroke();
-
-    // ランク（左上）
-    ctx.fillStyle=suit.color;
-    ctx.font=`bold ${Math.floor(h*0.28)}px Arial,sans-serif`;
-    ctx.textAlign='left';
-    ctx.fillText(rank,x+4,y+Math.floor(h*0.30));
-
-    // スート（左上小）
-    ctx.font=`${Math.floor(h*0.22)}px Arial,sans-serif`;
-    ctx.fillText(suit.sym,x+4,y+Math.floor(h*0.52));
-
-    // 中央スート
-    ctx.font=`bold ${Math.floor(h*0.42)}px Arial,sans-serif`;
-    ctx.textAlign='center';
-    ctx.fillText(suit.sym,x+w/2,y+h*0.65);
-
-    ctx.textAlign='left'; // リセット
-  }
-
-  function roundRect(ctx,x,y,w,h,r){
+  // ── ヘルパー ──────────────────────────────
+  function roundRect(x,y,w,h,r){
     ctx.beginPath();
     ctx.moveTo(x+r,y);
     ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
@@ -3812,141 +3776,110 @@ async function shareAsImage(){
     ctx.closePath();
   }
 
-  // ハンドカードをパース
-  function parseCards(str){
-    if(!str||str==='（未選択）') return [];
-    return str.split(' ').filter(Boolean);
+  function drawCard(cardStr,x,y){
+    if(!cardStr){
+      ctx.strokeStyle='#2a4a2a';ctx.lineWidth=1.5;
+      roundRect(x,y,CW,CH,6);ctx.stroke();
+      return;
+    }
+    const rank=cardStr.slice(0,-1);
+    const sk=cardStr.slice(-1);
+    const suitMap={s:{sym:'\u2660',col:'#111'},h:{sym:'\u2665',col:'#cc2200'},d:{sym:'\u2666',col:'#cc2200'},c:{sym:'\u2663',col:'#111'}};
+    const s=suitMap[sk]||{sym:'?',col:'#888'};
+    ctx.fillStyle='#f5f0e8';roundRect(x,y,CW,CH,6);ctx.fill();
+    ctx.strokeStyle='#bbb';ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle=s.col;
+    ctx.textAlign='left';
+    ctx.font=`bold ${Math.floor(CH*0.26)}px Arial,sans-serif`;
+    ctx.fillText(rank,x+4,y+Math.floor(CH*0.28));
+    ctx.font=`${Math.floor(CH*0.20)}px Arial,sans-serif`;
+    ctx.fillText(s.sym,x+4,y+Math.floor(CH*0.48));
+    ctx.textAlign='center';
+    ctx.font=`bold ${Math.floor(CH*0.40)}px Arial,sans-serif`;
+    ctx.fillText(s.sym,x+CW/2,y+CH*0.72);
+    ctx.textAlign='left';
   }
 
-  const handCards=parseCards(hand);
-  const boardCards2=parseCards(board);
-
-  const CW=52,CH=72,CGAP=8;
-  const handH2=CH+32; // カード高さ + ラベル
-
-  // 高さを再計算（カードあり）
-  const totalH=headerH+handH2+(lines.length*lineH+sectionH)+(commentLines.length*20+80)+120;
-  canvas.height=totalH;
-
-  // 背景再描画（高さ変わったため）
+  // ── 描画 ──────────────────────────────────
   ctx.fillStyle='#071507';ctx.fillRect(0,0,W,totalH);
   ctx.fillStyle='#c9a227';ctx.fillRect(0,0,W,3);
 
-  y=32;
+  let y=28;
 
   // ヘッダー
-  ctx.fillStyle='#c9a227';
-  ctx.font='bold 22px Arial,sans-serif';
-  ctx.textAlign='left';
-  ctx.fillText('♠ RINGDOM',PAD,y);
-  ctx.fillStyle='#3a5a3a';
-  ctx.font='11px Arial,sans-serif';
-  ctx.fillText('β版',W-PAD-30,y);
-  y+=20;
+  ctx.fillStyle='#c9a227';ctx.font='bold 20px Arial,sans-serif';ctx.textAlign='left';
+  ctx.fillText('\u2660 RINGDOM',PAD,y);
+  ctx.fillStyle='#3a5a3a';ctx.font='10px Arial,sans-serif';
+  ctx.fillText('\u03b2\u7248',W-PAD-24,y);
+  y+=32;
 
-  // Heroハンドラベル
-  ctx.fillStyle='#5a7a5a';
-  ctx.font='10px Arial,sans-serif';
-  ctx.fillText('HERO HAND',PAD,y+14);
-
-  // Heroカード描画
+  // Heroハンド
+  ctx.fillStyle='#5a7a5a';ctx.font='10px Arial,sans-serif';
+  ctx.fillText('HERO HAND',PAD,y);
   let cx=PAD+90;
-  if(handCards.length===0){
-    drawCard(ctx,null,cx,y,CW,CH);
-    drawCard(ctx,null,cx+CW+CGAP,y,CW,CH);
-  } else {
-    handCards.forEach((c,i)=>drawCard(ctx,c,cx+i*(CW+CGAP),y,CW,CH));
-  }
-  y+=CH+12;
+  if(handCards.length===0){drawCard(null,cx,y+4);drawCard(null,cx+CW+CGAP,y+4);}
+  else handCards.forEach((c,i)=>drawCard(c,cx+i*(CW+CGAP),y+4));
+  y+=cardRowH;
 
-  // ボードカード
-  if(boardCards2.length>0){
-    ctx.fillStyle='#5a7a5a';
-    ctx.font='10px Arial,sans-serif';
-    ctx.fillText('BOARD',PAD,y+14);
+  // ボード
+  if(hasBoard){
+    ctx.fillStyle='#5a7a5a';ctx.font='10px Arial,sans-serif';
+    ctx.fillText('BOARD',PAD,y);
     let bx=PAD+90;
-    boardCards2.forEach((c,i)=>drawCard(ctx,c,bx+i*(CW+CGAP),y,CW,CH));
-    y+=CH+12;
+    boardCards2.forEach((c,i)=>drawCard(c,bx+i*(CW+CGAP),y+4));
+    y+=cardRowH;
   }
-  y+=8;
 
-  // 区切り線
-  ctx.strokeStyle='#1e3a1e';
-  ctx.lineWidth=1;
+  // 区切り
+  ctx.strokeStyle='#1e3a1e';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(PAD,y);ctx.lineTo(W-PAD,y);ctx.stroke();
-  y+=20;
+  y+=18;
 
   // アクション経緯
   for(const e of lines){
     if(e.type==='street'){
-      ctx.fillStyle='#4ade80';
-      ctx.font='bold 13px Arial,sans-serif';
-      ctx.fillText(`[ ${e.text} ]`,PAD,y);
-      y+=lineH+4;
-    } else {
+      ctx.fillStyle='#4ade80';ctx.font='bold 13px Arial,sans-serif';
+      ctx.fillText(`[ ${e.text} ]`,PAD,y);y+=lineH+2;
+    }else{
       ctx.fillStyle=e.isHero?'#c9a227':'#7a9a7a';
       ctx.font=(e.isHero?'bold ':'')+'13px monospace';
-      ctx.fillText(e.text,PAD+12,y);
-      y+=lineH;
+      ctx.fillText(e.text,PAD+12,y);y+=lineH;
     }
   }
   y+=16;
 
-  // 区切り線
+  // 区切り
   ctx.strokeStyle='#1e3a1e';
   ctx.beginPath();ctx.moveTo(PAD,y);ctx.lineTo(W-PAD,y);ctx.stroke();
-  y+=24;
-
-  // AI評価
-  ctx.fillStyle='#c9a227';
-  ctx.font='bold 11px Arial,sans-serif';
-  ctx.fillText('AI COACH',PAD,y);
   y+=20;
 
-  // 星評価
+  // AI評価
+  ctx.fillStyle='#c9a227';ctx.font='bold 11px Arial,sans-serif';
+  ctx.fillText('AI COACH',PAD,y);y+=20;
   const ratingLine=rating.split('\n')[0]||'';
   const oneline=rating.split('\n')[1]||'';
-  ctx.fillStyle='#f0d060';
-  ctx.font='bold 28px Arial,sans-serif';
-  ctx.fillText(ratingLine,PAD,y);
-  y+=36;
+  ctx.fillStyle='#f0d060';ctx.font='bold 26px Arial,sans-serif';
+  ctx.fillText(ratingLine,PAD,y);y+=32;
   if(oneline){
-    ctx.fillStyle='#4ade80';
-    ctx.font='bold 15px Arial,sans-serif';
-    ctx.fillText(oneline,PAD,y);
-    y+=24;
+    ctx.fillStyle='#4ade80';ctx.font='bold 14px Arial,sans-serif';
+    ctx.fillText(oneline,PAD,y);y+=22;
   }
-
-  // コメント（折り返し）
-  ctx.fillStyle='#a0c0a0';
-  ctx.font='13px Arial,sans-serif';
-  for(const line of commentLines){
-    ctx.fillText(line,PAD,y);
-    y+=20;
-  }
-  y+=24;
+  ctx.fillStyle='#a0c0a0';ctx.font='13px Arial,sans-serif';
+  for(const l of commentLines){ctx.fillText(l,PAD,y);y+=20;}
+  y+=20;
 
   // フッター
-  ctx.fillStyle='#2a4a2a';
-  ctx.font='11px Arial,sans-serif';
+  ctx.fillStyle='#2a4a2a';ctx.font='11px Arial,sans-serif';
   ctx.fillText('ringdom.vercel.app',PAD,y);
-  ctx.fillStyle='#1e3a1e';
-  ctx.fillRect(0,totalH-3,W,3);
+  ctx.fillStyle='#c9a227';ctx.fillRect(0,totalH-3,W,3);
 
-  // 画像化・共有
+  // 共有
   canvas.toBlob(async blob=>{
     const file=new File([blob],'ringdom.png',{type:'image/png'});
     if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
-      try{
-        await navigator.share({
-          files:[file],
-          text:'#Ringdom #ポーカー\nhttps://ringdom.vercel.app'
-        });
-      }catch(e){if(e.name!=='AbortError') downloadImage(canvas);}
-    } else {
-      // フォールバック：ダウンロード
-      downloadImage(canvas);
-    }
+      try{await navigator.share({files:[file],text:'#Ringdom #ポーカー\nhttps://ringdom.vercel.app'});}
+      catch(e){if(e.name!=='AbortError')downloadImage(canvas);}
+    }else{downloadImage(canvas);}
   },'image/png');
 }
 
