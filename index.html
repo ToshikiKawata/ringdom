@@ -3731,17 +3731,15 @@ async function shareAsImage(){
   const canvas=document.createElement('canvas');
   const ctx=canvas.getContext('2d');
 
-  // 高さを事前計算
+  // 高さを事前計算（カード描画後に再計算するため暫定値）
   const lineH=26;
   const sectionH=36;
   const headerH=100;
-  const handH=60;
   const commentLines=wrapText(ctx,comment,W-PAD*2,15);
-  const totalH=headerH+handH+(lines.length*lineH+sectionH)+(commentLines.length*20+60)+100;
 
   canvas.width=W;
-  canvas.height=totalH;
-  ctx.clearRect(0,0,W,totalH);
+  canvas.height=800; // 暫定。カード描画関数内で再設定
+  ctx.clearRect(0,0,W,800);
 
   // 背景
   ctx.fillStyle='#071507';
@@ -3762,17 +3760,115 @@ async function shareAsImage(){
   ctx.fillText('β版',W-PAD-30,y);
   y+=36;
 
-  // ハンド・ボード
-  ctx.fillStyle='#d4e8d4';
-  ctx.font='bold 16px monospace';
-  const handStr=hand!=='（未選択）'?`🃏 ${hand}`:'🃏 —';
-  ctx.fillText(handStr,PAD,y);
-  if(board){
-    ctx.fillStyle='#7a9a7a';
-    ctx.font='14px monospace';
-    ctx.fillText(`Board: ${board}`,PAD,y+22);
+  // カード描画ヘルパー
+  function drawCard(ctx,cardStr,x,y,w,h){
+    if(!cardStr){
+      // 空カード
+      ctx.strokeStyle='#2a4a2a';
+      ctx.lineWidth=1.5;
+      roundRect(ctx,x,y,w,h,6);
+      ctx.stroke();
+      return;
+    }
+    const rank=cardStr.slice(0,-1);
+    const suitKey=cardStr.slice(-1);
+    const suitMap={s:{sym:'♠',color:'#1a1a2e'},h:{sym:'♥',color:'#cc2200'},d:{sym:'♦',color:'#cc2200'},c:{sym:'♣',color:'#1a1a2e'}};
+    const suit=suitMap[suitKey]||{sym:'?',color:'#888'};
+
+    // カード背景
+    ctx.fillStyle='#f5f0e8';
+    roundRect(ctx,x,y,w,h,6);
+    ctx.fill();
+    // 枠線
+    ctx.strokeStyle='#ccc';
+    ctx.lineWidth=1;
+    ctx.stroke();
+
+    // ランク（左上）
+    ctx.fillStyle=suit.color;
+    ctx.font=`bold ${Math.floor(h*0.28)}px Arial,sans-serif`;
+    ctx.textAlign='left';
+    ctx.fillText(rank,x+4,y+Math.floor(h*0.30));
+
+    // スート（左上小）
+    ctx.font=`${Math.floor(h*0.22)}px Arial,sans-serif`;
+    ctx.fillText(suit.sym,x+4,y+Math.floor(h*0.52));
+
+    // 中央スート
+    ctx.font=`bold ${Math.floor(h*0.42)}px Arial,sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillText(suit.sym,x+w/2,y+h*0.65);
+
+    ctx.textAlign='left'; // リセット
   }
-  y+=board?56:32;
+
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+  }
+
+  // ハンドカードをパース
+  function parseCards(str){
+    if(!str||str==='（未選択）') return [];
+    return str.split(' ').filter(Boolean);
+  }
+
+  const handCards=parseCards(hand);
+  const boardCards2=parseCards(board);
+
+  const CW=52,CH=72,CGAP=8;
+  const handH2=CH+32; // カード高さ + ラベル
+
+  // 高さを再計算（カードあり）
+  const totalH=headerH+handH2+(lines.length*lineH+sectionH)+(commentLines.length*20+80)+120;
+  canvas.height=totalH;
+
+  // 背景再描画（高さ変わったため）
+  ctx.fillStyle='#071507';ctx.fillRect(0,0,W,totalH);
+  ctx.fillStyle='#c9a227';ctx.fillRect(0,0,W,3);
+
+  y=32;
+
+  // ヘッダー
+  ctx.fillStyle='#c9a227';
+  ctx.font='bold 22px Arial,sans-serif';
+  ctx.textAlign='left';
+  ctx.fillText('♠ RINGDOM',PAD,y);
+  ctx.fillStyle='#3a5a3a';
+  ctx.font='11px Arial,sans-serif';
+  ctx.fillText('β版',W-PAD-30,y);
+  y+=20;
+
+  // Heroハンドラベル
+  ctx.fillStyle='#5a7a5a';
+  ctx.font='10px Arial,sans-serif';
+  ctx.fillText('HERO HAND',PAD,y+14);
+
+  // Heroカード描画
+  let cx=PAD+90;
+  if(handCards.length===0){
+    drawCard(ctx,null,cx,y,CW,CH);
+    drawCard(ctx,null,cx+CW+CGAP,y,CW,CH);
+  } else {
+    handCards.forEach((c,i)=>drawCard(ctx,c,cx+i*(CW+CGAP),y,CW,CH));
+  }
+  y+=CH+12;
+
+  // ボードカード
+  if(boardCards2.length>0){
+    ctx.fillStyle='#5a7a5a';
+    ctx.font='10px Arial,sans-serif';
+    ctx.fillText('BOARD',PAD,y+14);
+    let bx=PAD+90;
+    boardCards2.forEach((c,i)=>drawCard(ctx,c,bx+i*(CW+CGAP),y,CW,CH));
+    y+=CH+12;
+  }
+  y+=8;
 
   // 区切り線
   ctx.strokeStyle='#1e3a1e';
@@ -3810,15 +3906,16 @@ async function shareAsImage(){
   // 星評価
   const ratingLine=rating.split('\n')[0]||'';
   const oneline=rating.split('\n')[1]||'';
-  ctx.fillStyle='#e8f0e8';
-  ctx.font='bold 24px Arial,sans-serif';
+  ctx.fillStyle='#f0d060';
+  ctx.font='bold 28px Arial,sans-serif';
   ctx.fillText(ratingLine,PAD,y);
+  y+=36;
   if(oneline){
     ctx.fillStyle='#4ade80';
-    ctx.font='bold 14px Arial,sans-serif';
-    ctx.fillText(oneline,PAD+ratingLine.length*18,y);
+    ctx.font='bold 15px Arial,sans-serif';
+    ctx.fillText(oneline,PAD,y);
+    y+=24;
   }
-  y+=32;
 
   // コメント（折り返し）
   ctx.fillStyle='#a0c0a0';
