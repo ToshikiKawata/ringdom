@@ -3882,8 +3882,10 @@ async function shareAsImage(){
   const oneline=rating.split('\n')[1]||'';
   ctx.fillStyle='#f0d060';ctx.font='bold 26px Arial,sans-serif';
   ctx.fillText(ratingLine,PAD,y);y+=32;
+  const starCount=(ratingLine.match(/★/g)||[]).length;
+  const onelineColor=starCount>=4?'#4ade80':starCount===3?'#FBBF24':'#f87171';
   if(oneline){
-    ctx.fillStyle='#4ade80';ctx.font='bold 14px Arial,sans-serif';
+    ctx.fillStyle=onelineColor;ctx.font='bold 14px Arial,sans-serif';
     ctx.fillText(oneline,PAD,y);y+=22;
   }
   ctx.fillStyle='#a0c0a0';ctx.font='13px Arial,sans-serif';
