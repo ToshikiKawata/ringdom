@@ -3240,7 +3240,7 @@ ${question?'\n【質問】\n'+question:''}
 
     const ratingMatch=text.match(/評価[:：]\s*([★☆]+)/);
     const onelineMatch=text.match(/一言[:：]\s*(.+)/);
-    const commentMatch=text.match(/詳細コメント[:：]?\s*\n([\s\S]+)/);
+    const commentMatch=text.match(/コメント[:：]\s*(.+(?:\n(?!評価|一言|コメント).+)*)/s);
 
     const rating=ratingMatch?ratingMatch[1]:'—';
     const oneline=onelineMatch?onelineMatch[1].trim():'';
@@ -3836,7 +3836,7 @@ async function shareAsImage(){
   for(const e of lines){
     if(e.type==='street'){
       ctx.fillStyle='#4ade80';ctx.font='bold 13px Arial,sans-serif';
-      ctx.fillText(`[ ${e.text} ]`,PAD,y);y+=lineH+2;
+      ctx.fillText(e.text,PAD,y);y+=lineH+2;
     }else{
       ctx.fillStyle=e.isHero?'#c9a227':'#7a9a7a';
       ctx.font=(e.isHero?'bold ':'')+'13px monospace';
