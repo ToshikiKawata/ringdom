@@ -570,10 +570,12 @@ button:active{transform:scale(0.94);opacity:0.85}
 <div id="eval-result" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:10px">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
     <div style="font-size:9px;color:var(--gold);letter-spacing:1.5px">AI評価</div>
-    <button onclick="shareToX()" style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;background:#000;color:#fff;border:none">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.736l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-      ポスト
-    </button>
+    <div style="display:flex;gap:6px">
+      <button onclick="shareAsImage()" style="display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;background:#000;color:#fff;border:none">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.736l7.73-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        ポスト
+      </button>
+    </div>
   </div>
   <div id="eval-rating" style="font-size:22px;margin-bottom:8px;padding-bottom:10px;border-bottom:1px solid var(--border)"></div>
   <div id="eval-comment" style="font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap"></div>
@@ -3708,44 +3710,172 @@ document.addEventListener('touchstart', e=>{
   showOnboarding();
 })();
 
-function shareToX(){
+async function shareAsImage(){
   const rating=document.getElementById('eval-rating')?.innerText||'';
   const comment=document.getElementById('eval-comment')?.textContent||'';
   const hand=getHandString();
   const board=getBoardString();
 
-  // アクション経緯を要約（ストリート + アクションのみ・AUTO除く）
-  const actionLines=actionLog
-    .filter(e=>e.type==='street'||(e.type==='action'&&!e.auto))
-    .map(e=>{
-      if(e.type==='street') return e.label;
-      const isHero=e.player===heroPos();
-      const aLabel=ACTION_LABELS[e.action]||e.action;
-      const size=e.size?` ${e.size}bb`:'';
-      return`${isHero?'Hero':e.player}: ${aLabel}${size}`;
-    });
-  const actionStr=actionLines.join(' / ');
-  const shortAction=actionStr.length>60?actionStr.slice(0,59)+'…':actionStr;
+  // アクション経緯（手動のみ）
+  const lines=actionLog.map(e=>{
+    if(e.type==='street') return{type:'street',text:e.label};
+    if(e.auto) return{type:'auto',text:''};
+    const isHero=e.player===heroPos();
+    const aLabel=ACTION_LABELS[e.action]||e.action;
+    const size=e.size?` ${e.size}bb`:'';
+    return{type:'action',isHero,text:`${isHero?'Hero('+e.player+')':e.player}: ${aLabel}${size}`};
+  }).filter(e=>e.text);
 
-  const handStr=hand!=='（未選択）'?`🃏 ${hand}`:'';
-  const boardStr=board?` | Board: ${board}`:'';
+  // Canvas描画
+  const W=600,PAD=32;
+  const canvas=document.createElement('canvas');
+  const ctx=canvas.getContext('2d');
+
+  // 高さを事前計算
+  const lineH=26;
+  const sectionH=36;
+  const headerH=100;
+  const handH=60;
+  const commentLines=wrapText(ctx,comment,W-PAD*2,15);
+  const totalH=headerH+handH+(lines.length*lineH+sectionH)+(commentLines.length*20+60)+100;
+
+  canvas.width=W;
+  canvas.height=totalH;
+  ctx.clearRect(0,0,W,totalH);
+
+  // 背景
+  ctx.fillStyle='#071507';
+  ctx.fillRect(0,0,W,totalH);
+
+  // 上部ゴールドライン
+  ctx.fillStyle='#c9a227';
+  ctx.fillRect(0,0,W,3);
+
+  let y=32;
+
+  // ヘッダー
+  ctx.fillStyle='#c9a227';
+  ctx.font='bold 22px Arial,sans-serif';
+  ctx.fillText('♠ RINGDOM',PAD,y);
+  ctx.fillStyle='#3a5a3a';
+  ctx.font='11px Arial,sans-serif';
+  ctx.fillText('β版',W-PAD-30,y);
+  y+=36;
+
+  // ハンド・ボード
+  ctx.fillStyle='#d4e8d4';
+  ctx.font='bold 16px monospace';
+  const handStr=hand!=='（未選択）'?`🃏 ${hand}`:'🃏 —';
+  ctx.fillText(handStr,PAD,y);
+  if(board){
+    ctx.fillStyle='#7a9a7a';
+    ctx.font='14px monospace';
+    ctx.fillText(`Board: ${board}`,PAD,y+22);
+  }
+  y+=board?56:32;
+
+  // 区切り線
+  ctx.strokeStyle='#1e3a1e';
+  ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(PAD,y);ctx.lineTo(W-PAD,y);ctx.stroke();
+  y+=20;
+
+  // アクション経緯
+  for(const e of lines){
+    if(e.type==='street'){
+      ctx.fillStyle='#4ade80';
+      ctx.font='bold 13px Arial,sans-serif';
+      ctx.fillText(`[ ${e.text} ]`,PAD,y);
+      y+=lineH+4;
+    } else {
+      ctx.fillStyle=e.isHero?'#c9a227':'#7a9a7a';
+      ctx.font=(e.isHero?'bold ':'')+'13px monospace';
+      ctx.fillText(e.text,PAD+12,y);
+      y+=lineH;
+    }
+  }
+  y+=16;
+
+  // 区切り線
+  ctx.strokeStyle='#1e3a1e';
+  ctx.beginPath();ctx.moveTo(PAD,y);ctx.lineTo(W-PAD,y);ctx.stroke();
+  y+=24;
+
+  // AI評価
+  ctx.fillStyle='#c9a227';
+  ctx.font='bold 11px Arial,sans-serif';
+  ctx.fillText('AI COACH',PAD,y);
+  y+=20;
+
+  // 星評価
   const ratingLine=rating.split('\n')[0]||'';
   const oneline=rating.split('\n')[1]||'';
-  const shortComment=comment.length>50?comment.slice(0,49)+'…':comment;
+  ctx.fillStyle='#e8f0e8';
+  ctx.font='bold 24px Arial,sans-serif';
+  ctx.fillText(ratingLine,PAD,y);
+  if(oneline){
+    ctx.fillStyle='#4ade80';
+    ctx.font='bold 14px Arial,sans-serif';
+    ctx.fillText(oneline,PAD+ratingLine.length*18,y);
+  }
+  y+=32;
 
-  const text=[
-    `${handStr}${boardStr}`,
-    shortAction?`📋 ${shortAction}`:'',
-    `${ratingLine} ${oneline}`,
-    '',
-    shortComment,
-    '',
-    '#Ringdom #ポーカー',
-    'https://ringdom.vercel.app'
-  ].filter(Boolean).join('\n');
+  // コメント（折り返し）
+  ctx.fillStyle='#a0c0a0';
+  ctx.font='13px Arial,sans-serif';
+  for(const line of commentLines){
+    ctx.fillText(line,PAD,y);
+    y+=20;
+  }
+  y+=24;
 
-  const url='https://x.com/intent/tweet?text='+encodeURIComponent(text);
-  window.open(url,'_blank');
+  // フッター
+  ctx.fillStyle='#2a4a2a';
+  ctx.font='11px Arial,sans-serif';
+  ctx.fillText('ringdom.vercel.app',PAD,y);
+  ctx.fillStyle='#1e3a1e';
+  ctx.fillRect(0,totalH-3,W,3);
+
+  // 画像化・共有
+  canvas.toBlob(async blob=>{
+    const file=new File([blob],'ringdom.png',{type:'image/png'});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({
+          files:[file],
+          text:'#Ringdom #ポーカー\nhttps://ringdom.vercel.app'
+        });
+      }catch(e){if(e.name!=='AbortError') downloadImage(canvas);}
+    } else {
+      // フォールバック：ダウンロード
+      downloadImage(canvas);
+    }
+  },'image/png');
+}
+
+function wrapText(ctx,text,maxW,fontSize){
+  ctx.font=`${fontSize}px Arial,sans-serif`;
+  const words=text.split('');
+  const lines=[];
+  let current='';
+  for(const ch of words){
+    const test=current+ch;
+    if(ctx.measureText(test).width>maxW&&current){
+      lines.push(current);
+      current=ch;
+    } else {
+      current=test;
+    }
+  }
+  if(current) lines.push(current);
+  return lines;
+}
+
+function downloadImage(canvas){
+  const a=document.createElement('a');
+  a.download='ringdom.png';
+  a.href=canvas.toDataURL('image/png');
+  a.click();
 }
 function loadEvalHistory(){
   try{return JSON.parse(localStorage.getItem('ringdom_eval_history')||'[]');}catch{return[];}
