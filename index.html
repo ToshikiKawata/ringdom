@@ -2551,6 +2551,7 @@ function initActionBuilder(){
   // Preflopを自動追加
   actionLog.push({type:'street',street:'preflop',label:STREET_LABELS['preflop']});
   updateStreetBtns();
+  getNextToAct();
   renderAbPlayerSelect();
   renderAbHeroPosBtns();
   renderActionLog();
@@ -2655,6 +2656,27 @@ function getAutoChecks(currentPlayer){
   return order.slice(0,curIdx).filter(p=>unacted.includes(p));
 }
 
+function getNextToAct(){
+  const acts=getStreetActions();
+  const active=getActivePlayers();
+  const hasAggr=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
+  const orderFn=currentStreet==='preflop'?preflopOrder:postFlopOrder;
+  const order=orderFn().filter(p=>active.includes(p));
+  if(!hasAggr){
+    const acted=new Set(acts.map(e=>e.player));
+    return order.find(p=>!acted.has(p))||order[0];
+  }
+  let lastAggrIdx=-1;
+  for(let i=acts.length-1;i>=0;i--){
+    if(['bet','raise','3bet','allin'].includes(acts[i].action)){lastAggrIdx=i;break;}
+  }
+  const aggrPlayer=acts[lastAggrIdx].player;
+  const actedAfter=new Set(acts.slice(lastAggrIdx+1).map(e=>e.player));
+  const aggrOrderIdx=order.indexOf(aggrPlayer);
+  const rotated=[...order.slice(aggrOrderIdx+1),...order.slice(0,aggrOrderIdx+1)];
+  return rotated.find(p=>!actedAfter.has(p)&&p!==aggrPlayer)||order[0];
+}
+
 function renderAbPlayerSelect(){
   const sel=document.getElementById('ab-player');
   if(!sel)return;
@@ -2668,8 +2690,8 @@ function renderAbPlayerSelect(){
     const label=isHero?`★ Hero(${seat})`:pname?`${seat}(${pname})`:seat;
     return`<option value="${seat}">${label}</option>`;
   }).join('');
-  if(active.includes(heroPos())) sel.value=heroPos();
-  else if(active.length>0) sel.value=active[0];
+  const next=getNextToAct();
+  sel.value=next||(active.includes(heroPos())?heroPos():active[0]);
   // アクション選択肢も更新
   renderActionSelect(sel.value);
   // プレイヤー変更時にもアクション更新
