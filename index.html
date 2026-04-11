@@ -3186,6 +3186,105 @@ function buildTableContext(){
   return lines.join('\n');
 }
 
+function analyzeBoardAndHero(){
+  const board=boardCards.filter(Boolean);
+  const hero=heroCards.filter(Boolean);
+  const lines=[];
+
+  if(board.length<3||hero.length<2) return '';
+
+  const RV={'A':14,'K':13,'Q':12,'J':11,'T':10,'9':9,'8':8,'7':7,'6':6,'5':5,'4':4,'3':3,'2':2};
+  const bRanks=board.map(c=>c[0]);
+  const bSuits=board.map(c=>c[1]);
+
+  // ── ボードテクスチャ ──────────────────────────────
+  const rc={};bRanks.forEach(r=>rc[r]=(rc[r]||0)+1);
+  const trips=Object.entries(rc).filter(([,c])=>c>=3);
+  const pairs=Object.entries(rc).filter(([,c])=>c===2);
+  const sc={};bSuits.forEach(s=>sc[s]=(sc[s]||0)+1);
+  const flushSuit=Object.entries(sc).find(([,c])=>c>=3);
+  const vals=bRanks.map(r=>RV[r]).sort((a,b)=>b-a);
+  const spread=vals[0]-vals[vals.length-1];
+
+  const tex=[];
+  if(trips.length) tex.push(`ボードトリップス(${trips.map(x=>x[0]).join(',')})`);
+  else if(pairs.length) tex.push(`ボードペア(${pairs.map(x=>x[0]).join(',')})`);
+  if(flushSuit) tex.push(`フラッシュボード(${flushSuit[1]}枚/${flushSuit[0]})`);
+  if(spread<=4) tex.push('ストレートコネクト');
+  if(vals[0]>=12) tex.push('ハイカードボード');
+  lines.push('ボードテクスチャ: '+(tex.join(' / ')||'ドライ'));
+
+  // ── Heroのハンド強度 ──────────────────────────────
+  const HNAMES=['ハイカード','ワンペア','ツーペア','スリーカード','ストレート',
+    'フラッシュ','フルハウス','フォーカード','ストレートフラッシュ','ロイヤルフラッシュ'];
+  const hv=best5from7([...hero,...board]);
+  const handName=HNAMES[hv[0]];
+  lines.push(`Heroのメイドハンド: ${handName}`);
+
+  // ── ナッツ判定・上位ハンド警告 ──────────────────────
+  const warnings=[];
+  const hasBoardPair=pairs.length>0||trips.length>0;
+
+  if(hv[0]===4){// ストレート
+    if(hasBoardPair) warnings.push('⚠ ボードペアあり → フルハウス/フォーカードに負ける可能性');
+    if(flushSuit) warnings.push('⚠ フラッシュボード → フラッシュ/ストレートフラッシュに負ける可能性');
+    // ナッツストレート判定
+    const heroVals=hero.map(c=>RV[c[0]]);
+    const allVals=[...vals,...heroVals].sort((a,b)=>b-a);
+    const topStraight=vals[0]; // ボードの最高値
+    const heroContributes=heroVals.some(v=>v>topStraight);
+    if(!heroContributes) warnings.push('⚠ ヒーローはストレートのボトム側の可能性あり');
+  }
+  if(hv[0]===5){// フラッシュ
+    if(hasBoardPair) warnings.push('⚠ ボードペアあり → フルハウス/フォーカードに負ける可能性');
+    // ナッツフラッシュ判定
+    const heroSuit=hero[0][1]===hero[1][1]?hero[0][1]:null;
+    if(heroSuit&&heroSuit===flushSuit?.[0]){
+      const heroFlushVals=hero.map(c=>RV[c[0]]).sort((a,b)=>b-a);
+      if(heroFlushVals[0]<14) warnings.push(`⚠ ナッツフラッシュ(A${flushSuit[0]})に負ける可能性`);
+    }
+  }
+  if(hv[0]===6){// フルハウス
+    const heroRanks=hero.map(c=>c[0]);
+    const allRc={...rc};
+    heroRanks.forEach(r=>allRc[r]=(allRc[r]||0)+1);
+    const myTrips=Object.entries(allRc).filter(([,c])=>c>=3).map(([r])=>RV[r]).sort((a,b)=>b-a);
+    if(myTrips.length&&myTrips[0]<vals[0]) warnings.push('⚠ より高いフルハウスに負ける可能性');
+  }
+  if(hv[0]===1){// ワンペア
+    warnings.push('⚠ ワンペアはポストフロップでドロー・ツーペア以上に脆弱');
+  }
+  if(hv[0]===2){// ツーペア
+    if(hasBoardPair) warnings.push('⚠ ボードペアでツーペアはフルハウスに負ける可能性');
+  }
+
+  if(warnings.length) lines.push(warnings.join('\n'));
+
+  // ── ドロー判定 ──────────────────────────────────
+  if(board.length<5){
+    const draws=[];
+    const heroVals=hero.map(c=>RV[c[0]]);
+    const allValsForDraw=[...vals,...heroVals];
+    // フラッシュドロー
+    if(!flushSuit){
+      const heroSuit=hero[0][1];
+      const sameSuit=[...board.filter(c=>c[1]===heroSuit),...hero.filter(c=>c[1]===heroSuit)];
+      if(sameSuit.length>=4) draws.push('フラッシュドロー(1枚待ち)');
+      else if(sameSuit.length>=3) draws.push('バックドアフラッシュ');
+    }
+    // ストレートドロー（簡易）
+    if(hv[0]<4){
+      const uVals=[...new Set(allValsForDraw)].sort((a,b)=>a-b);
+      for(let i=0;i<=uVals.length-4;i++){
+        if(uVals[i+3]-uVals[i]<=4) {draws.push('ストレートドロー');break;}
+      }
+    }
+    if(draws.length) lines.push('Heroのドロー: '+draws.join(' / '));
+  }
+
+  return lines.join('\n');
+}
+  
 async function evaluatePlay(){
   const hand=getHandString();
   const board=getBoardString();
@@ -3210,11 +3309,15 @@ async function evaluatePlay(){
   try{
     tableCtx=buildTableContext();
     actionStr=buildActionString();
+    const boardAnalysis=analyzeBoardAndHero();
     prompt=`以下のポーカーハンドを評価してください。
 
 【ハンド情報】
-手: ${hand}${board?'\nボード: '+board:''}
+手: ${hand}${board&&board!=='（未選択）'?'\nボード: '+board:''}
 スタック: ${stack} / ストリート: ${street}
+
+【ハンド・ボード分析（必ず考慮すること）】
+${boardAnalysis||'（プリフロップ）'}
 
 【テーブル状況】
 ${tableCtx}
@@ -3226,7 +3329,7 @@ ${question?'\n【質問】\n'+question:''}
 以下の形式で必ず回答してください（形式を崩さないこと）:
 評価: ★★★★★（1〜5個）
 一言: 10文字以内の核心
-コメント: 対戦相手のプロフィール（タイト/ルース/ステーションなど）を必ず考慮した上で、このハンドの判断を200文字以内で評価してください。良い点・改善点・相手特性に基づく推奨アクションを含めてください。`;
+コメント: 上記の【ハンド・ボード分析】の警告（⚠）を必ず考慮した上で、対戦相手のプロフィールも踏まえて200文字以内で評価してください。ナッツでない場合はその旨を明記し、具体的な改善点を述べてください。`;
   }catch(buildErr){
     document.getElementById('eval-result').style.display='block';
     document.getElementById('eval-comment').textContent='プロンプト生成エラー: '+buildErr.message;
