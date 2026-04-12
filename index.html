@@ -3196,7 +3196,8 @@ function buildTableContext(){
 }
 
 function analyzeBoardAndHero(){
-  const board=boardCards.filter(Boolean);
+  const streetLimit={preflop:0,flop:3,turn:4,river:5};
+  const board=boardCards.filter(Boolean).slice(0,streetLimit[currentStreet]||5);
   const hero=heroCards.filter(Boolean);
   const lines=[];
 
