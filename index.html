@@ -3054,7 +3054,14 @@ function openCardPicker(mode){
   } else {
     pickerSelected=[...boardCards].filter(Boolean);
   }
+  document.getElementById('picker-title').textContent=
+    mode==='hand'?'ハンドを選択（2枚）':'ボードを選択（最大5枚）';
+  renderPickerGrid();
+  const ov=document.getElementById('card-picker-overlay');
+  ov.style.opacity='1';ov.style.pointerEvents='all';
+}
 
+  
 function closeCardPicker(){
   // Commit selection
   if(pickerMode==='hand'){
