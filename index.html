@@ -3038,7 +3038,16 @@ function refreshCardDisplays(){
 
 function openCardPicker(mode){
   pickerMode=mode;
-  pickerSelected=mode==='hand'?[...heroCards].filter(Boolean):[...boardCards].filter(Boolean);
+  if(mode==='hand'){
+    pickerSelected=[...heroCards].filter(Boolean);
+  } else if(mode==='board'){
+    // null で止める（ターンが空ならリバーは無視）
+    pickerSelected=[];
+    for(const c of boardCards){
+      if(!c) break;
+      pickerSelected.push(c);
+    }
+  }
   document.getElementById('picker-title').textContent=
     mode==='hand'?'ハンドを選択（2枚）':'ボードを選択（最大5枚）';
   renderPickerGrid();
