@@ -3901,8 +3901,8 @@ async function shareAsImage(){
   const commentLines=wrapT(comment,W-PAD*2);
 
   function parseCards(str){
-    if(!str||str==='（未選択）')return[];
-    return str.split(' ').filter(Boolean);
+  if(!str||str==='（未選択）')return[];
+  return str.split(' ').filter(s=>s!=='/'&&s.length>=2);
   }
   const handCards=parseCards(hand);
   const boardCards2=parseCards(board);
