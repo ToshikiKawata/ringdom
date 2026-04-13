@@ -3033,7 +3033,11 @@ function renderCardSlot(id,card){
 
 function refreshCardDisplays(){
   heroCards.forEach((c,i)=>renderCardSlot(`hero-card-${i}`,c));
-  boardCards.forEach((c,i)=>renderCardSlot(`board-card-${i}`,c));
+  let stop=false;
+  boardCards.forEach((c,i)=>{
+    if(!c) stop=true;
+    renderCardSlot(`board-card-${i}`,stop?null:c);
+  });
 }
 
 function openCardPicker(mode){
@@ -3161,7 +3165,7 @@ function getBoardString(){
   if(flop.length===0) return'（未選択）';
   let s=flop.join(' ');
   if(turn) s+=' / '+turn;
-  if(river) s+=' / '+river;
+  if(turn&&river) s+=' / '+river; 
   return s;
 }
 function renderVillainStacks(){
