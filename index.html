@@ -3246,7 +3246,10 @@ function analyzeBoardAndHero(){
     'フラッシュ','フルハウス','フォーカード','ストレートフラッシュ','ロイヤルフラッシュ'];
   const hv=best5from7([...hero,...board]);
   const handName=HNAMES[hv[0]];
-  lines.push(`Heroのメイドハンド: ${handName}`);
+  const flushNote=(!flushSuit&&(hv[0]===8||hv[0]===9))?
+  '※ フラッシュボードではないためストレートフラッシュは不成立':
+  (!flushSuit&&hv[0]===5)?'※ フラッシュは不成立':'';
+  lines.push(`Heroのメイドハンド: ${handName}${flushNote?'（'+flushNote+'）':''}`);
 
   // ── ナッツ判定・上位ハンド警告 ──────────────────────
   const warnings=[];
