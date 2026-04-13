@@ -2417,7 +2417,7 @@ function switchTab(tab){
   }
   if(tab==='range'){renderPosBtns();renderMatrix();}
   if(tab==='book'){renderBookTagBtns();renderBookList();}
-  if(tab==='log'){renderVillainStacks();renderLogPosBtns();renderEvalHistory();}
+  if(tab==='log'){renderVillainStacks();renderLogPosBtns();renderEvalHistory();refreshCardDisplays();}
   if(tab==='eq'){refreshEqDisplays();}
 }
 
@@ -4127,4 +4127,5 @@ function renderAll(){
 }
 
 renderAll();
+refreshCardDisplays(); 
 </script>
