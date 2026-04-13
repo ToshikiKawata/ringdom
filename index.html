@@ -3168,15 +3168,18 @@ function getHandString(){
 }
 
 function getBoardString(){
-  const flop=boardCards.slice(0,3).filter(Boolean);
-  const turn=boardCards[3];
-  const river=boardCards[4];
-  if(flop.length===0) return'（未選択）';
-  let s=flop.join(' ');
-  if(turn) s+=' / '+turn;
-  if(turn&&river) s+=' / '+river; 
-  return s;
+  const cards=[];
+  for(const c of boardCards){
+    if(!c) break; // nullで止める
+    cards.push(c);
+  }
+  if(cards.length===0) return '（未選択）';
+  const flop=cards.slice(0,3).join(' ');
+  const turn=cards[3]?(' / '+cards[3]):'';
+  const river=cards[4]?(' / '+cards[4]):'';
+  return flop+turn+river;
 }
+  
 function renderVillainStacks(){
   renderAbPlayerSelect();
   renderAbHeroPosBtns();
