@@ -3037,10 +3037,9 @@ function refreshCardDisplays(){
   boardCards.forEach((c,i)=>{
     if(!c) stop=true;
     if(stop){
-      // ?を表示せず空のスロットにする
       const el=document.getElementById(`board-card-${i}`);
       if(el){el.className='card-slot';el.textContent='';el.style='';}
-    } else {
+    }else{
       renderCardSlot(`board-card-${i}`,c);
     }
   });
@@ -3050,14 +3049,10 @@ function openCardPicker(mode){
   pickerMode=mode;
   if(mode==='hand'){
     pickerSelected=[...heroCards].filter(Boolean);
-  } else if(mode==='board'){
-    // null で止める（ターンが空ならリバーは読まない）
+  }else if(mode==='board'){
     pickerSelected=[];
-    for(const c of boardCards){
-      if(!c) break;
-      pickerSelected.push(c);
-    }
-  } else {
+    for(const c of boardCards){if(!c) break;pickerSelected.push(c);}
+  }else{
     pickerSelected=[...boardCards].filter(Boolean);
   }
   document.getElementById('picker-title').textContent=
@@ -3169,10 +3164,7 @@ function getHandString(){
 
 function getBoardString(){
   const cards=[];
-  for(const c of boardCards){
-    if(!c) break; // nullで止める
-    cards.push(c);
-  }
+  for(const c of boardCards){if(!c) break;cards.push(c);}
   if(cards.length===0) return '（未選択）';
   const flop=cards.slice(0,3).join(' ');
   const turn=cards[3]?(' / '+cards[3]):'';
@@ -3222,7 +3214,7 @@ function buildTableContext(){
 
 function analyzeBoardAndHero(){
   const streetLimit={preflop:0,flop:3,turn:4,river:5};
-  const board=boardCards.filter(Boolean).slice(0,streetLimit[currentStreet]||5);
+  const board=boardCards.slice(0,streetLimit[currentStreet]||5).filter(Boolean);
   const hero=heroCards.filter(Boolean);
   const lines=[];
 
