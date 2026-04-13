@@ -3036,7 +3036,13 @@ function refreshCardDisplays(){
   let stop=false;
   boardCards.forEach((c,i)=>{
     if(!c) stop=true;
-    renderCardSlot(`board-card-${i}`,stop?null:c);
+    if(stop){
+      // ?を表示せず空のスロットにする
+      const el=document.getElementById(`board-card-${i}`);
+      if(el){el.className='card-slot';el.textContent='';el.style='';}
+    } else {
+      renderCardSlot(`board-card-${i}`,c);
+    }
   });
 }
 
