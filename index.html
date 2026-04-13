@@ -3045,19 +3045,15 @@ function openCardPicker(mode){
   if(mode==='hand'){
     pickerSelected=[...heroCards].filter(Boolean);
   } else if(mode==='board'){
-    // null で止める（ターンが空ならリバーは無視）
+    // null で止める（ターンが空ならリバーは読まない）
     pickerSelected=[];
     for(const c of boardCards){
       if(!c) break;
       pickerSelected.push(c);
     }
+  } else {
+    pickerSelected=[...boardCards].filter(Boolean);
   }
-  document.getElementById('picker-title').textContent=
-    mode==='hand'?'ハンドを選択（2枚）':'ボードを選択（最大5枚）';
-  renderPickerGrid();
-  const ov=document.getElementById('card-picker-overlay');
-  ov.style.opacity='1';ov.style.pointerEvents='all';
-}
 
 function closeCardPicker(){
   // Commit selection
