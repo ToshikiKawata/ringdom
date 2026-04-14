@@ -3261,12 +3261,14 @@ function analyzeBoardAndHero(){
   const warnings=[];
   const hasBoardPair=pairs.length>0||trips.length>0;
 
-  if(hv[0]===4){// ストレート
-    const heroVals=hero.map(c=>RV[c[0]]);
-    const straight=hv[1]; // ストレートのトップ値
-    const maxPossible=Math.min(14,vals[0]+4); // ボードから作れる最高ストレートトップ
-    if(straight>=maxPossible){
+  if(hv[0]===4){
+    const straight=hv[1];
+    const maxPossible=Math.min(14,vals[0]+4);
+    // ボードペアがある場合はナッツ確定しない
+    if(straight>=maxPossible&&!hasBoardPair&&!flushSuit){
       lines.push('★ ナッツストレート確定');
+    } else if(straight>=maxPossible&&hasBoardPair){
+      warnings.push('⚠ ストレート完成だがボードペアあり → QQ/JJ等のフルハウスに負ける可能性');
     } else {
       warnings.push('⚠ ナッツではない（より高いストレートが存在する可能性）');
     }
