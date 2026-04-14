@@ -3248,9 +3248,15 @@ function analyzeBoardAndHero(){
   const handName=HNAMES[hv[0]];
   const flushNote=(!flushSuit&&(hv[0]===8||hv[0]===9))?
   '※ フラッシュボードではないためストレートフラッシュは不成立':
-  (!flushSuit&&hv[0]===5)?'※ フラッシュは不成立':'';
-  lines.push(`Heroのメイドハンド: ${handName}${flushNote?'（'+flushNote+'）':''}`);
-
+    (!flushSuit&&hv[0]===5)?'※ フラッシュは不成立':'';
+  const heroSuited=hero[0][1]===hero[1][1];
+  const heroSuit=heroSuited?hero[0][1]:null;
+  const boardHeroSameFlushCount=heroSuited?[...board,...hero].filter(c=>c[1]===heroSuit).length:0;
+  const isActualFlush=boardHeroSameFlushCount>=5;
+  const correctedName=(hv[0]===5&&!isActualFlush)?'ストレート（フラッシュ未完成）':handName;
+  lines.push(`Heroのメイドハンド: ${correctedName}`);
+  lines.push(`注意: スーツ別カード数 - ${Object.entries([...board,...hero].reduce((a,c)=>{a[c[1]]=(a[c[1]]||0)+1;return a},{})).map(([s,n])=>s+':'+n+'枚').join(', ')}`);
+  
   // ── ナッツ判定・上位ハンド警告 ──────────────────────
   const warnings=[];
   const hasBoardPair=pairs.length>0||trips.length>0;
