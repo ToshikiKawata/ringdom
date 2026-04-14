@@ -3262,15 +3262,18 @@ function analyzeBoardAndHero(){
   const hasBoardPair=pairs.length>0||trips.length>0;
 
   if(hv[0]===4){// ストレート
+    const heroVals=hero.map(c=>RV[c[0]]);
+    const straight=hv[1]; // ストレートのトップ値
+    const maxPossible=Math.min(14,vals[0]+4); // ボードから作れる最高ストレートトップ
+    if(straight>=maxPossible){
+      lines.push('★ ナッツストレート確定');
+    } else {
+      warnings.push('⚠ ナッツではない（より高いストレートが存在する可能性）');
+    }
     if(hasBoardPair) warnings.push('⚠ ボードペアあり → フルハウス/フォーカードに負ける可能性');
     if(flushSuit) warnings.push('⚠ フラッシュボード → フラッシュ/ストレートフラッシュに負ける可能性');
-    // ナッツストレート判定
-    const heroVals=hero.map(c=>RV[c[0]]);
-    const allVals=[...vals,...heroVals].sort((a,b)=>b-a);
-    const topStraight=vals[0]; // ボードの最高値
-    const heroContributes=heroVals.some(v=>v>topStraight);
-    if(!heroContributes) warnings.push('⚠ ヒーローはストレートのボトム側の可能性あり');
   }
+  
   if(hv[0]===5){// フラッシュ
     if(hasBoardPair) warnings.push('⚠ ボードペアあり → フルハウス/フォーカードに負ける可能性');
     // ナッツフラッシュ判定
