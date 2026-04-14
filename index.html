@@ -3297,6 +3297,39 @@ function analyzeBoardAndHero(){
     if(hasBoardPair) warnings.push('⚠ ボードペアでツーペアはフルハウスに負ける可能性');
   }
 
+  // ── ブロッカー情報 ──────────────────────────────────────
+const blockers=[];
+const heroValsArr=hero.map(c=>RV[c[0]]);
+const heroSuitsArr=hero.map(c=>c[1]);
+
+// フラッシュブロッカー
+['s','h','d','c'].forEach(suit=>{
+  const boardOfSuit=board.filter(c=>c[1]===suit).length;
+  const heroOfSuit=hero.filter(c=>c[1]===suit).length;
+  const total=boardOfSuit+heroOfSuit;
+  if(total>=3&&heroOfSuit>0){
+    const heroFlushCards=hero.filter(c=>c[1]===suit).map(c=>RV[c[0]]).sort((a,b)=>b-a);
+    const suitName={s:'スペード',h:'ハート',d:'ダイヤ',c:'クラブ'}[suit];
+    if(heroFlushCards[0]===14){
+      blockers.push(`★ ナッツ${suitName}フラッシュブロッカー(A) → 相手の最高${suitName}フラッシュはKハイ止まり`);
+    } else if(heroFlushCards[0]===13){
+      blockers.push(`◆ ${suitName}フラッシュブロッカー(K) → 相手の最高${suitName}フラッシュはQハイ止まり`);
+    } else {
+      blockers.push(`△ ${suitName}フラッシュブロッカー(${hero.filter(c=>c[1]===suit).map(c=>c[0]).join('')})`);
+    }
+  }
+});
+
+// ストレートブロッカー（相手のナッツストレートをブロックしているか）
+if(hv[0]===4){
+  const straight=hv[1];
+  // ナッツストレートのキーカード（A or Kなど）を持っているか
+  if(heroValsArr.includes(14)) blockers.push('★ エースブロッカー → 相手のナッツストレート(A絡み)をブロック');
+  else if(heroValsArr.includes(13)) blockers.push('◆ Kブロッカー → 相手のKハイストレートをブロック');
+}
+
+if(blockers.length) lines.push('ブロッカー: '+blockers.join(' / '));
+
   if(warnings.length) lines.push(warnings.join('\n'));
 
   // ── ドロー判定 ──────────────────────────────────
