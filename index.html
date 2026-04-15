@@ -558,10 +558,7 @@ button:active{transform:scale(0.94);opacity:0.85}
   </div>
   <button id="add-action-btn" onclick="addAction()" style="width:100%;padding:11px;border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#16a34a;color:#fff;border:none">追加する</button>
 </div>
-<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:12px">
-  <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">評価してほしいポイント</div>
-  <textarea id="log-question" rows="2" placeholder="例: 3betは正しかった？ベットサイズは？" style="width:100%;padding:8px;border-radius:6px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;outline:none;resize:none;line-height:1.5"></textarea>
-</div>
+
 <button onclick="evaluatePlay()" id="eval-btn" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#2a3a2a;color:#5a7a5a;border:none;margin-bottom:14px">
   AIに評価してもらう（ハンドとアクションを入力してください）
 </button>
@@ -3364,7 +3361,6 @@ async function evaluatePlay(){
   const board=getBoardString();
   const stack=state.stackSize+'BB（レンジ設定より）';
   const action=buildActionString();
-  const question=document.getElementById('log-question').value.trim();
   const street=currentStreet;
 
   if(heroCards.filter(Boolean).length<2){alert('ハンドを2枚選択してください');return;}
@@ -3398,7 +3394,6 @@ ${tableCtx}
 
 【アクション経緯】
 ${actionStr}
-${question?'\n【質問】\n'+question:''}
 
 以下の形式で必ず回答してください（形式を崩さないこと）:
 評価: ★★★★★（1〜5個）
