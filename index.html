@@ -2648,13 +2648,13 @@ function getAutoChecks(currentPlayer){
   const acts=getStreetActions();
   const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
   if(hasAggressive) return [];
-  // ベットなし：currentPlayerより前で未アクション→自動チェック
   const order=postFlopOrder();
-  const unacted=getUnarctedThisStreet();
+  const unacted=new Set(getUnarctedThisStreet()); // ← Setに変更
   const curIdx=order.indexOf(currentPlayer);
   if(curIdx<0) return [];
-  return order.slice(0,curIdx).filter(p=>unacted.includes(p));
+  return order.slice(0,curIdx).filter(p=>unacted.has(p)); // ← has()に変更
 }
+
 
 function getNextToAct(){
   const acts=getStreetActions();
