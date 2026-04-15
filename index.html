@@ -3857,11 +3857,8 @@ document.addEventListener('touchstart', e=>{
   const TOTAL=4;
 
   function showOnboarding(){
-    // 開発中は毎回表示（LocalStorageのフラグも削除）
-    localStorage.removeItem('ra_onboarded');
-    // リリース時は上記を削除して下記を有効にする:
-    // if(localStorage.getItem('ra_onboarded')){ finishOnboarding(false); return; }
-  }
+  if(localStorage.getItem('ra_onboarded')){ finishOnboarding(false); return; }
+}
 
   function obGoTo(n){
     const prev=currentSlide;
