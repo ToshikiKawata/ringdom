@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RINGDOM — リングゲームをdominate</title>
+<meta name="description" content="リングゲーム特化のエクスプロイト戦略ツール。相手を読み、レンジを最適化し、AIが評価する。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #c9a227;
+  --gold-dim: #7a6010;
+  --gold-light: #e8c84a;
+  --green-dark: #060e06;
+  --green-mid: #0a1a0a;
+  --green-felt: #0d2210;
+  --text: #d4e8d4;
+  --text-dim: #5a7a5a;
+  --text-muted: #2a3a2a;
+  --accent: #4ade80;
+  --surface: #0d1f0d;
+  --border: #1e3a1e;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--green-dark);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+/* ── Noise overlay ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.4;
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  padding: 20px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, rgba(6,14,6,0.95) 0%, transparent 100%);
+}
+
+.nav-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  color: var(--gold);
+  letter-spacing: 3px;
+  text-decoration: none;
+}
+
+.nav-cta {
+  padding: 10px 24px;
+  background: var(--gold);
+  color: #060e06;
+  border-radius: 2px;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+
+.nav-cta:hover {
+  background: var(--gold-light);
+  transform: translateY(-1px);
+}
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 120px 40px 80px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-table {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.06;
+  pointer-events: none;
+}
+
+.hero-table svg {
+  width: 800px;
+  height: 500px;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 20px;
+  font-size: 11px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  margin-bottom: 40px;
+  font-family: 'DM Mono', monospace;
+}
+
+.hero-badge::before {
+  content: '●';
+  font-size: 8px;
+  color: var(--accent);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(56px, 10vw, 120px);
+  font-weight: 900;
+  color: var(--gold);
+  letter-spacing: 8px;
+  line-height: 0.9;
+  margin-bottom: 12px;
+}
+
+.hero-suit {
+  font-size: clamp(32px, 5vw, 64px);
+  margin-bottom: 32px;
+  opacity: 0.6;
+}
+
+.hero-sub {
+  font-size: clamp(14px, 2vw, 18px);
+  color: var(--text-dim);
+  font-weight: 300;
+  letter-spacing: 1px;
+  max-width: 480px;
+  line-height: 1.8;
+  margin-bottom: 56px;
+}
+
+.hero-sub strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-primary {
+  padding: 16px 40px;
+  background: var(--gold);
+  color: #060e06;
+  border-radius: 2px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  letter-spacing: 2px;
+  transition: all 0.2s;
+  font-family: 'DM Mono', monospace;
+}
+
+.btn-primary:hover {
+  background: var(--gold-light);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(201,162,39,0.3);
+}
+
+.btn-secondary {
+  padding: 16px 40px;
+  background: transparent;
+  color: var(--text-dim);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-size: 14px;
+  font-weight: 400;
+  text-decoration: none;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+
+.hero-scroll {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 2px;
+  font-family: 'DM Mono', monospace;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(180deg, var(--gold-dim), transparent);
+  animation: scrollDown 2s infinite;
+}
+
+@keyframes scrollDown {
+  0% { transform: scaleY(0); transform-origin: top; }
+  50% { transform: scaleY(1); transform-origin: top; }
+  51% { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* ── DIVIDER ── */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
+  margin: 0 40px;
+}
+
+/* ── FEATURES ── */
+.features {
+  padding: 120px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+
+.section-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(32px, 5vw, 52px);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+  margin-bottom: 80px;
+}
+
+.section-title em {
+  color: var(--gold);
+  font-style: normal;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2px;
+}
+
+.feature-card {
+  padding: 48px 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transition: transform 0.3s;
+  transform-origin: left;
+}
+
+.feature-card:hover::before {
+  transform: scaleX(1);
+}
+
+.feature-card:hover {
+  background: #111f11;
+}
+
+.feature-num {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--gold-dim);
+  letter-spacing: 2px;
+  margin-bottom: 24px;
+}
+
+.feature-icon {
+  font-size: 32px;
+  margin-bottom: 20px;
+  display: block;
+}
+
+.feature-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  color: var(--text);
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+
+.feature-desc {
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.8;
+  font-weight: 300;
+}
+
+/* ── HOW IT WORKS ── */
+.how {
+  padding: 120px 40px;
+  background: var(--green-mid);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.how-inner {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 80px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 40px;
+  padding: 48px 0;
+  border-bottom: 1px solid var(--border);
+  align-items: start;
+}
+
+.step:last-child {
+  border-bottom: none;
+}
+
+.step-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 64px;
+  font-weight: 900;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.step-content {}
+
+.step-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  color: var(--gold);
+  margin-bottom: 12px;
+  font-weight: 700;
+}
+
+.step-desc {
+  font-size: 15px;
+  color: var(--text-dim);
+  line-height: 1.8;
+  font-weight: 300;
+}
+
+.step-desc strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ── AI SECTION ── */
+.ai-section {
+  padding: 120px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 80px;
+  align-items: center;
+}
+
+.ai-visual {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 32px;
+  font-family: 'DM Mono', monospace;
+}
+
+.ai-label {
+  font-size: 9px;
+  color: var(--gold);
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+}
+
+.ai-stars {
+  font-size: 28px;
+  margin-bottom: 12px;
+  color: var(--gold);
+}
+
+.ai-headline {
+  font-size: 15px;
+  color: var(--accent);
+  font-weight: 500;
+  margin-bottom: 16px;
+}
+
+.ai-comment {
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.8;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.ai-cards {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.ai-card {
+  width: 36px;
+  height: 50px;
+  background: #f5f0e8;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+  color: #111;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+.ai-card.red { color: #cc2200; }
+
+.ai-board {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.ai-sep {
+  width: 1px;
+  height: 30px;
+  background: var(--border);
+}
+
+/* ── PRICING ── */
+.pricing {
+  padding: 120px 40px;
+  background: var(--green-mid);
+  border-top: 1px solid var(--border);
+}
+
+.pricing-inner {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  margin-top: 60px;
+  text-align: left;
+}
+
+.plan {
+  padding: 48px 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  position: relative;
+}
+
+.plan.featured {
+  border-color: var(--gold-dim);
+  background: #0f1f0f;
+}
+
+.plan.featured::before {
+  content: 'β版 無料公開中';
+  position: absolute;
+  top: -1px; right: 24px;
+  background: var(--gold);
+  color: #060e06;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 4px 12px;
+  letter-spacing: 1px;
+  font-family: 'DM Mono', monospace;
+}
+
+.plan-name {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.plan.featured .plan-name { color: var(--gold); }
+
+.plan-price {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 32px;
+  letter-spacing: 1px;
+}
+
+.plan.featured .plan-price { color: var(--accent); }
+
+.plan-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-features li {
+  font-size: 14px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 300;
+}
+
+.plan-features li::before {
+  content: '✓';
+  color: var(--gold-dim);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.plan.featured .plan-features li::before {
+  color: var(--accent);
+}
+
+/* ── CTA BOTTOM ── */
+.cta-bottom {
+  padding: 160px 40px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-bottom::before {
+  content: '♠';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 400px;
+  color: var(--text-muted);
+  opacity: 0.03;
+  pointer-events: none;
+  line-height: 1;
+}
+
+.cta-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(32px, 6vw, 72px);
+  font-weight: 900;
+  color: var(--text);
+  margin-bottom: 24px;
+  line-height: 1.1;
+}
+
+.cta-title em {
+  color: var(--gold);
+  font-style: normal;
+}
+
+.cta-sub {
+  font-size: 15px;
+  color: var(--text-dim);
+  margin-bottom: 48px;
+  font-weight: 300;
+}
+
+/* ── FOOTER ── */
+footer {
+  padding: 40px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footer-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  color: var(--gold);
+  letter-spacing: 3px;
+}
+
+.footer-note {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: 'DM Mono', monospace;
+}
+
+.footer-warning {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0 40px 40px;
+  line-height: 1.7;
+}
+
+/* ── ANIMATIONS ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── MOBILE ── */
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  .hero { padding: 100px 24px 80px; }
+  .features, .how, .cta-bottom { padding: 80px 24px; }
+  .features-grid { grid-template-columns: 1fr; }
+  .ai-section { grid-template-columns: 1fr; padding: 80px 24px; gap: 40px; }
+  .pricing { padding: 80px 24px; }
+  .pricing-grid { grid-template-columns: 1fr; }
+  .step { grid-template-columns: 60px 1fr; gap: 20px; }
+  footer { padding: 24px; }
+  .footer-warning { padding: 0 24px 24px; }
+  .divider { margin: 0 24px; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="nav-logo">♠ RINGDOM</a>
+  <a href="https://ringdom.vercel.app" class="nav-cta">無料で始める →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-table">
+    <svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="400" cy="250" rx="380" ry="230" fill="#c9a227" opacity="0.3"/>
+      <ellipse cx="400" cy="250" rx="370" ry="220" fill="#071507"/>
+      <ellipse cx="400" cy="250" rx="340" ry="200" fill="#0d3a0d" opacity="0.5"/>
+    </svg>
+  </div>
+
+  <div class="hero-badge">β版 無料公開中</div>
+
+  <div class="hero-title">RINGDOM</div>
+  <div class="hero-suit">♠ ♥ ♦ ♣</div>
+
+  <p class="hero-sub">
+    リングゲームを<strong>dominate</strong>する。<br>
+    相手のクセを読み、レンジを最適化し、<br>
+    AIがプレーを評価する。
+  </p>
+
+  <div class="hero-actions">
+    <a href="https://ringdom.vercel.app" class="btn-primary">APP を開く</a>
+    <a href="#features" class="btn-secondary">詳しく見る</a>
+  </div>
+
+  <div class="hero-scroll">
+    <div class="scroll-line"></div>
+    SCROLL
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="reveal">
+    <div class="section-label">FEATURES</div>
+    <div class="section-title">勝つために必要な<br><em>3つの武器</em></div>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="feature-num">01</div>
+      <span class="feature-icon">🎯</span>
+      <div class="feature-title">エクスプロイト戦略</div>
+      <p class="feature-desc">
+        相手のVPIP・アグレッション・スキルレベルを登録すると、テーブル全体のプロフィールを解析。スティール・3bet・ブラフの方針をリアルタイムで提示する。
+      </p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-num">02</div>
+      <span class="feature-icon">📊</span>
+      <div class="feature-title">動的レンジマトリックス</div>
+      <p class="feature-desc">
+        スタックサイズ・レーキ・テーブル人数・相手の特性に応じて、最適なオープンレンジを自動補正。RFI / 3BET / BB守備の3シナリオ対応。
+      </p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-num">03</div>
+      <span class="feature-icon">🤖</span>
+      <div class="feature-title">AI ハンド評価</div>
+      <p class="feature-desc">
+        ハンドとアクション経緯を入力すると、ナッツ判定・ブロッカー・ボードテクスチャを踏まえたプロコーチレベルの評価を返す。画像で共有も可能。
+      </p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- HOW IT WORKS -->
+<section class="how" id="how">
+  <div class="how-inner">
+    <div class="reveal">
+      <div class="section-label">HOW IT WORKS</div>
+      <div class="section-title">使い方は<em>シンプル</em></div>
+    </div>
+
+    <div class="steps">
+      <div class="step reveal">
+        <div class="step-num">01</div>
+        <div class="step-content">
+          <div class="step-title">相手を登録する</div>
+          <p class="step-desc">
+            テーブルタブで各席の特徴を設定。<strong>ステーション・フォールダー・マニアック・ニットロール</strong>など、今夜の卓の人物像を3軸で記録する。
+          </p>
+        </div>
+      </div>
+
+      <div class="step reveal">
+        <div class="step-num">02</div>
+        <div class="step-content">
+          <div class="step-title">レンジが変わる</div>
+          <p class="step-desc">
+            相手のプロフィールが入力されると、<strong>EXPLOIT補正が自動的にレンジマトリックスへ反映</strong>される。誰を・どう搾取するかをEXPLOITボタンで即確認。
+          </p>
+        </div>
+      </div>
+
+      <div class="step reveal">
+        <div class="step-num">03</div>
+        <div class="step-content">
+          <div class="step-title">AIに相談する</div>
+          <p class="step-desc">
+            ハンドとアクション経緯をLOGタブに記録してAI評価ボタンを押す。<strong>ボードテクスチャ・ナッツ判定・ブロッカー</strong>を考慮した評価が返ってくる。
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AI SECTION -->
+<section class="ai-section" id="ai">
+  <div class="reveal">
+    <div class="section-label">AI COACH</div>
+    <div class="section-title" style="margin-bottom: 24px;">プロコーチが<br><em>隣にいる</em>感覚</div>
+    <p style="font-size: 15px; color: var(--text-dim); line-height: 1.9; font-weight: 300;">
+      ナッツかどうか、ブロッカーは何を持っているか、ボードペアがあるかどうか——これらを自動計算してAIに渡す。だからコメントが<strong style="color: var(--text); font-weight: 500;">本質的に正確</strong>。
+    </p>
+  </div>
+
+  <div class="ai-visual reveal">
+    <div class="ai-label">AI EVALUATION SAMPLE</div>
+    <div class="ai-cards">
+      <div class="ai-card">A<br>♠</div>
+      <div class="ai-card">K<br>♠</div>
+    </div>
+    <div class="ai-board">
+      <div class="ai-card">Q<br>♠</div>
+      <div class="ai-card">J<br>♠</div>
+      <div class="ai-card red">T<br>♥</div>
+      <div class="ai-sep"></div>
+      <div class="ai-card red">9<br>♥</div>
+    </div>
+    <div class="ai-stars">★★★★★</div>
+    <div class="ai-headline">ナッツストレート確定</div>
+    <div class="ai-comment">
+      AsKsでQJT9ボードはナッツストレート（AKQJT）。A♠ブロッカーにより相手のスペードフラッシュはQハイ止まり。BBのターンレイズにはセット・フルハウス候補も含まれるが、ナッツなのでコールは正解。リレイズオールインも強く推奨される。
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="pricing-inner">
+    <div class="reveal">
+      <div class="section-label">PRICING</div>
+      <div class="section-title">β版は<em>全機能無料</em></div>
+    </div>
+
+    <div class="pricing-grid">
+      <div class="plan reveal">
+        <div class="plan-name">Free</div>
+        <div class="plan-price">¥0 / 永久無料</div>
+        <ul class="plan-features">
+          <li>テーブル設定・EXPLOIT Advisor</li>
+          <li>レンジマトリックス（全シナリオ）</li>
+          <li>エクイティ計算</li>
+          <li>AI評価 月3回</li>
+          <li>プレイヤー帳 5人まで</li>
+        </ul>
+      </div>
+
+      <div class="plan featured reveal">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">¥980 / 月（正式リリース後）</div>
+        <ul class="plan-features">
+          <li>Freeの全機能</li>
+          <li>AI評価 無制限</li>
+          <li>プレイヤー帳 無制限</li>
+          <li>評価履歴クラウド保存</li>
+          <li>新機能への優先アクセス</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BOTTOM -->
+<section class="cta-bottom">
+  <div class="cta-title reveal">
+    今夜の卓を<br><em>支配せよ。</em>
+  </div>
+  <p class="cta-sub reveal">β版につき、全機能が無料でお使いいただけます。</p>
+  <a href="https://ringdom.vercel.app" class="btn-primary reveal">無料で始める →</a>
+</section>
+
+<div class="divider"></div>
+
+<footer>
+  <div class="footer-logo">♠ RINGDOM</div>
+  <div class="footer-note">ringdom.vercel.app</div>
+</footer>
+
+<div class="footer-warning">
+  ⚠ プレー中の使用は推奨しません。事前準備と振り返りのためのツールです。
+</div>
+
+<script>
+// Reveal on scroll
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
+</body>
+</html>
