@@ -1453,9 +1453,9 @@ function applyPlayer(seatIdx,playerName){
   if(!p)return;
   state.seatProfiles[seatIdx]={...(p.profile||{vpip:1,agg:1,skill:1,tends:[]}),name:playerName};
   renderAll();
-  renderSheetPlayers(seatIdx); // 選択状態を更新（シートは開いたまま）
+  openSheet(seatIdx); // シート全体を再描画
 }
-
+  
 function renderSheetPlayers(seatIdx){
   const players=loadPlayers();
   const el=document.getElementById('sheet-players');
