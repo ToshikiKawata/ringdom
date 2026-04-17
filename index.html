@@ -4108,9 +4108,20 @@ function saveEvalHistory(h){
 }
 function addEvalHistory(entry){
   const h=loadEvalHistory();
-  h.unshift(entry); // 新しいものを先頭に
-  if(h.length>50) h.pop(); // 最大50件
-  saveEvalHistory(h);
+  h.unshift(entry);
+  if(h.length>50) h.pop();
+  try{
+    saveEvalHistory(h);
+  }catch(e){
+    // クォータ超過時は古い履歴を削除してリトライ
+    while(h.length>10){
+      h.pop();
+      try{
+        saveEvalHistory(h);
+        break;
+      }catch{}
+    }
+  }
   renderEvalHistory();
 }
 function deleteEvalHistory(idx){
