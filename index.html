@@ -1437,25 +1437,33 @@ function deletePlayer(playerName){
   const players=loadPlayers().filter(p=>p.name!==playerName);
   savePlayers(players);
   // 席に同名プレイヤーが登録されていたらnameをクリア
-  state.seatProfiles.forEach((pro,i)=>{
-    if(pro&&pro.name===playerName){
-      state.seatProfiles[i]={...pro,name:''};
+  Object.keys(state.seatProfiles).forEach(i=>{
+    if(state.seatProfiles[i]?.name===playerName){
+      delete state.seatProfiles[i].name;
     }
   });
-  if(state.activeSheet!==null) renderSheetPlayers(state.activeSheet);
+  if(state.activeSheet!==null) openSheet(state.activeSheet);
   renderBookList();
   renderAll();
 }
-
+  
 function applyPlayer(seatIdx,playerName){
+  const current=state.seatProfiles[seatIdx];
+  // すでに適用中なら解除（プロフィールをデフォルトに戻す）
+  if(current?.name===playerName){
+    state.seatProfiles[seatIdx]=defaultProfile();
+    renderAll();
+    openSheet(seatIdx);
+    return;
+  }
   const players=loadPlayers();
   const p=players.find(p=>p.name===playerName);
   if(!p)return;
-  state.seatProfiles[seatIdx]={...(p.profile||{vpip:1,agg:1,skill:1,tends:[]}),name:playerName};
+  state.seatProfiles[seatIdx]={...(p.profile||defaultProfile()),name:playerName};
   renderAll();
-  openSheet(seatIdx); // シート全体を再描画
+  openSheet(seatIdx);
 }
-  
+
 function renderSheetPlayers(seatIdx){
   const players=loadPlayers();
   const el=document.getElementById('sheet-players');
