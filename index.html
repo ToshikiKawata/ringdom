@@ -10,45 +10,56 @@
 <!-- PWA Manifest (inline) -->
 
 <script>
-(function(){
-  const manifest={
-    name:'Ringdom',
-    short_name:'Ringdom',
-    description:'リングゲームをdominate。リアルタイムエクスプロイト戦略ツール。',
-    start_url:'.',
-    display:'standalone',
-    background_color:'#071507',
-    theme_color:'#071507',
-    orientation:'portrait',
-    icons:[
-      {src:makeIcon(192),sizes:'192x192',type:'image/png'},
-      {src:makeIcon(512),sizes:'512x512',type:'image/png'},
-    ]
-  };
-  function makeIcon(size){
-    // SVGをPNG Data URLに変換
-    const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
-      <rect width="100" height="100" rx="22" fill="#071507"/>
-      <rect x="4" y="4" width="92" height="92" rx="18" fill="none" stroke="#c9a227" stroke-width="2"/>
-      <text x="50" y="42" text-anchor="middle" font-family="Georgia,serif" font-size="32" fill="#c9a227">♠</text>
-      <text x="50" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="800" fill="#c9a227" letter-spacing="1">RING</text>
-      <text x="50" y="86" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="800" fill="#c9a227" letter-spacing="1">DOM</text>
-    </svg>`;
-    const canvas=document.createElement('canvas');
-    canvas.width=canvas.height=size;
-    const ctx=canvas.getContext('2d');
-    const img=new Image();
-    const blob=new Blob([svg],{type:'image/svg+xml'});
-    const url=URL.createObjectURL(blob);
-    // Return placeholder — actual conversion happens async below
-    return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+const APP_VERSION = 'v2.1.0'; // ← デプロイ時にバージョンを上げる
+
+if('serviceWorker' in navigator){
+  const swCode = `
+const CACHE='ringdom-${APP_VERSION}';
+const ASSETS=['/'];
+self.addEventListener('install',e=>{
+  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
+  self.skipWaiting();
+});
+self.addEventListener('activate',e=>{
+  e.waitUntil(caches.keys().then(keys=>
+    Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))
+  ));
+  self.clients.claim();
+});
+self.addEventListener('fetch',e=>{
+  // /api/ は素通し（キャッシュしない）
+  if(e.request.url.includes('/api/')){
+    e.respondWith(fetch(e.request));
+    return;
   }
-  const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement('link');
-  link.rel='manifest';link.href=url;
-  document.head.appendChild(link);
-})();
+  e.respondWith(
+    caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('/')))
+  );
+});
+`;
+  const blob = new Blob([swCode], {type:'application/javascript'});
+  const url = URL.createObjectURL(blob);
+
+  navigator.serviceWorker.register(url).then(reg => {
+    // 新バージョン検知
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      if(!newSW) return;
+      newSW.addEventListener('statechange', () => {
+        if(newSW.state === 'installed' && navigator.serviceWorker.controller){
+          // 新バージョン利用可能
+          if(confirm('新バージョンが利用可能です。今すぐ更新しますか？')){
+            newSW.postMessage({type:'SKIP_WAITING'});
+            window.location.reload();
+          }
+        }
+      });
+    });
+  }).catch(()=>{});
+
+  // 起動時に毎回更新チェック
+  navigator.serviceWorker.ready.then(reg => reg.update());
+}
 </script>
 
 <!-- Apple Touch Icon (SVG inline → link) -->
