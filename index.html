@@ -801,8 +801,83 @@ const TEND_META={
 };
 const ALL_TENDS=Object.keys(TEND_META);
 // デフォルトプロフィール
-function defaultProfile(){return{vpip:1,agg:1,skill:1,tends:[]};}
-function profileOf(i){return state.seatProfiles[i]||defaultProfile();}
+function defaultProfile(){
+  return{
+    vpip:1,agg:1,skill:1,tends:[],
+    // ── 観察カウンター関連（新規） ──
+    observation:{hands:0,vpipCount:0,pfrCount:0,threeBetCount:0,foldCount:0},
+    streetTags:[],
+    note:'',
+    updatedAt:null,
+  };
+}
+
+// 既存データのマイグレーション（欠損フィールドを補完）
+function migrateProfile(p){
+  if(!p) return defaultProfile();
+  const d=defaultProfile();
+  return{
+    vpip:p.vpip??d.vpip,
+    agg:p.agg??d.agg,
+    skill:p.skill??d.skill,
+    tends:p.tends??[],
+    observation:p.observation??d.observation,
+    streetTags:p.streetTags??[],
+    note:p.note??'',
+    updatedAt:p.updatedAt??null,
+    name:p.name, // optional
+  };
+}
+
+function profileOf(i){
+  const raw=state.seatProfiles[i];
+  if(!raw) return defaultProfile();
+  const p=migrateProfile(raw);
+  const obs=p.observation;
+  // 観察データが閾値未満なら手動値をそのまま返す
+  if(!obs||obs.hands<10) return p;
+  // 観察データから vpip/agg 軸を自動算出して上書き
+  const c=autoClassify(obs);
+  return{...p,vpip:c.vpipAxis,agg:c.aggAxis};
+}
+
+// ── 観察データからタイプを自動判定 ──
+function autoClassify(obs){
+  if(!obs||obs.hands===0){
+    return{label:'未観察',vpipAxis:1,aggAxis:1,vpipPct:null,pfrPct:null,threeBetPct:null,confidence:'none',note:null};
+  }
+  const h=obs.hands;
+  const vpip=obs.vpipCount/h;
+  const pfr=obs.pfrCount/h;
+  const threeBet=obs.threeBetCount/h;
+
+  // サンプルサイズによる信頼度
+  let confidence,note;
+  if(h<10){confidence='low';note='⚠ サンプル少（参考値）';}
+  else if(h<25){confidence='mid';note='参考データ';}
+  else{confidence='high';note=null;}
+
+  // VPIP軸へのマッピング（3段階）
+  const vpipAxis=vpip<0.20?0:vpip>0.35?2:1;
+
+  // アグレッション軸（PFR/VPIP比で判定）
+  const pfrRatio=vpip>0?pfr/vpip:0.5;
+  const aggAxis=pfrRatio>0.75?2:pfrRatio<0.45?0:1;
+
+  // タイプラベル
+  const vpipLabel=['タイト','普通','ルース'][vpipAxis];
+  const aggLabel=['パッシブ','普通','アグレ'][aggAxis];
+  const label=`${vpipLabel}・${aggLabel}`;
+
+  return{
+    label,vpipAxis,aggAxis,
+    vpipPct:Math.round(vpip*100),
+    pfrPct:Math.round(pfr*100),
+    threeBetPct:Math.round(threeBet*100),
+    confidence,note,
+  };
+}
+
 const BASE_RFI={BTN:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':1,'77':1,'66':1,'55':.8,'44':.6,'33':.45,'22':.35,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':1,'A7s':1,'A6s':1,'A5s':1,'A4s':1,'A3s':1,'A2s':.9,'KQs':1,'KJs':1,'KTs':1,'K9s':1,'K8s':.7,'K7s':.5,'QJs':1,'QTs':1,'Q9s':.7,'Q8s':.4,'JTs':1,'J9s':.8,'J8s':.4,'T9s':1,'T8s':.8,'T7s':.4,'98s':1,'97s':.7,'96s':.3,'87s':1,'86s':.5,'76s':1,'75s':.4,'65s':1,'64s':.3,'54s':.9,'53s':.4,'AKo':1,'AQo':1,'AJo':1,'ATo':1,'A9o':.7,'A8o':.4,'KQo':1,'KJo':1,'KTo':.8,'K9o':.5,'QJo':1,'QTo':.7,'Q9o':.3,'JTo':1,'J9o':.4,'T9o':.5,'98o':.3},CO:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':1,'77':1,'66':.8,'55':.6,'44':.4,'33':.25,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':1,'A7s':.8,'A6s':.7,'A5s':1,'A4s':.7,'A3s':.5,'KQs':1,'KJs':1,'KTs':1,'K9s':.7,'K8s':.4,'QJs':1,'QTs':1,'Q9s':.5,'JTs':1,'J9s':.7,'T9s':1,'T8s':.5,'98s':.8,'87s':.6,'76s':.5,'AKo':1,'AQo':1,'AJo':1,'ATo':.8,'KQo':1,'KJo':1,'KTo':.6,'QJo':1,'QTo':.5,'JTo':.7},HJ:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.8,'77':.6,'66':.4,'55':.3,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':.8,'A7s':.6,'A5s':1,'A4s':.6,'KQs':1,'KJs':1,'KTs':.8,'K9s':.5,'QJs':1,'QTs':1,'Q9s':.4,'JTs':1,'J9s':.5,'T9s':.8,'98s':.5,'87s':.4,'AKo':1,'AQo':1,'AJo':1,'ATo':.6,'KQo':1,'KJo':1,'KTo':.4,'QJo':.7},MP:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.7,'77':.5,'66':.3,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':.8,'A8s':.5,'A5s':.8,'KQs':1,'KJs':1,'KTs':.7,'QJs':1,'QTs':.8,'JTs':1,'T9s':.5,'AKo':1,'AQo':1,'AJo':1,'ATo':.5,'KQo':1,'KJo':.7,'QJo':.5},UTG:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':.9,'88':.6,'77':.4,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':.7,'A5s':.6,'KQs':1,'KJs':1,'KTs':.6,'QJs':1,'QTs':.7,'JTs':1,'AKo':1,'AQo':1,'AJo':.7,'KQo':1},SB:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.9,'77':.7,'66':.5,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':.8,'A5s':1,'A4s':.7,'KQs':1,'KJs':1,'KTs':.9,'K9s':.6,'QJs':1,'QTs':.9,'JTs':1,'AKo':1,'AQo':1,'AJo':1,'ATo':.7,'KQo':1,'KJo':.8,'QJo':.7},BB:{}};
 BASE_RFI['UTG+1']={...BASE_RFI.UTG};BASE_RFI['MP+1']={...BASE_RFI.MP};
 
@@ -1411,7 +1486,14 @@ function renderMatrix(){
 }
 
 // ── Player Book (localStorage) ────────────────────────────────
-function loadPlayers(){try{return JSON.parse(localStorage.getItem('pokerPlayers')||'[]')}catch{return[]}}
+function loadPlayers(){
+  try{
+    const raw=JSON.parse(localStorage.getItem('pokerPlayers')||'[]');
+    // 既存データのマイグレーション
+    return raw.map(p=>({name:p.name,profile:migrateProfile(p.profile)}));
+  }catch{return[];}
+}
+
 function savePlayers(players){try{localStorage.setItem('pokerPlayers',JSON.stringify(players))}catch{}}
 
 function savePlayer(){
