@@ -214,7 +214,29 @@ button:active{transform:scale(0.94);opacity:0.85}
 .ob-step{display:flex;gap:14px;align-items:flex-start;margin-bottom:22px;background:#0d1f0d;border-radius:12px;padding:14px}
 .ob-step-num{font-size:20px;font-weight:800;color:#c9a227;opacity:0.5;flex-shrink:0;line-height:1;margin-top:2px}
 ::-webkit-scrollbar{display:none}
+
+/* ── Observation Counter (Phase 2) ── */
+.obs-summary{background:#0d1f0d;border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin:8px 16px 12px}
+.obs-summary-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.obs-summary-label{font-size:9px;color:var(--text-dim);letter-spacing:1.5px}
+.obs-type-pill{font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px}
+.obs-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:6px}
+.obs-stat-cell{background:var(--surface3);border-radius:6px;padding:6px 4px;text-align:center}
+.obs-stat-label{font-size:8px;color:var(--text-dim);letter-spacing:1px;margin-bottom:2px}
+.obs-stat-value{font-size:15px;font-weight:700;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1}
+.obs-confidence{font-size:10px;text-align:center;margin-top:4px}
+.obs-counter-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:0 16px 14px}
+.obs-btn{background:var(--surface3);border:1.5px solid var(--border2);color:var(--text);padding:10px 2px;border-radius:10px;font-family:inherit;font-size:10px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:58px;transition:transform .08s,background .12s}
+.obs-btn:active{transform:scale(0.92);background:var(--gold);border-color:var(--gold);color:#0a1a0a}
+.obs-btn-icon{font-size:14px;line-height:1}
+.obs-btn-count{font-size:13px;font-weight:800;color:var(--gold);line-height:1;font-variant-numeric:tabular-nums}
+.obs-undo-bar{margin:0 16px 10px;background:#0d2a10;border:1px solid #1a5c1a;border-radius:8px;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;font-size:11px}
+.obs-undo-bar-label{color:#4ade80}
+.obs-undo-btn{padding:4px 12px;border-radius:5px;font-size:11px;font-weight:700;background:transparent;color:#4ade80;border:1px solid #4ade80;cursor:pointer;font-family:inherit}
+.axis-dimmed{opacity:0.4}
+.axis-dimmed-notice{font-size:10px;color:#4ade80;margin-bottom:6px;display:flex;align-items:center;gap:5px}
 </style>
+
 
 <!-- ── Onboarding ── -->
 
@@ -877,6 +899,68 @@ function autoClassify(obs){
     confidence,note,
   };
 }
+// ── 観察カウンター操作 ──
+let lastObsAction=null; // {seatIdx, type} for Undo
+
+const OBS_TYPES={
+  vpip:{label:'参加',icon:'👁',desc:'プリフロで自主参加（call/raise/3bet）'},
+  call:{label:'コール',icon:'→',desc:'プリフロでコールのみ'},
+  raise:{label:'レイズ',icon:'↑',desc:'プリフロでオープンレイズ'},
+  threeBet:{label:'3Bet',icon:'⇈',desc:'プリフロで3Bet'},
+  fold:{label:'降り',icon:'✕',desc:'プリフロでフォールド'},
+};
+
+function addObservation(seatIdx,type){
+  const p=migrateProfile(state.seatProfiles[seatIdx]||defaultProfile());
+  const obs={...p.observation};
+
+  // ハンド数は fold / vpip / call / raise / threeBet のいずれかが押されたら+1
+  // ただし、1ハンドで参加したら「vpip + call/raise/threeBet の片方」が両方押される運用。
+  // シンプル化のため: vpip / fold で hands をカウント、他はサブ情報のみ加算
+  if(type==='vpip'){obs.hands++;obs.vpipCount++;}
+  else if(type==='fold'){obs.hands++;obs.foldCount++;}
+  else if(type==='call'){obs.vpipCount++;} // vpipの内訳
+  else if(type==='raise'){obs.vpipCount++;obs.pfrCount++;}
+  else if(type==='threeBet'){obs.vpipCount++;obs.pfrCount++;obs.threeBetCount++;}
+
+  // ハンド数が vpip+fold で暗黙カウントされていない場合の補正
+  // (ユーザーがvpip無しでcall/raise/threeBetを押した場合、hands も+1する)
+  // → ただしこれは「参加ボタン無しでいきなりraise」という押し方を許容する形
+  // シンプルさ優先で、上記の暗黙補正は入れない (UIでhandsボタンを先に押す運用)
+
+  state.seatProfiles[seatIdx]={...p,observation:obs,updatedAt:Date.now()};
+  lastObsAction={seatIdx,type};
+  haptic('light');
+  renderAll();
+  openSheet(seatIdx); // シート再描画
+}
+
+function undoObservation(){
+  if(!lastObsAction) return;
+  const{seatIdx,type}=lastObsAction;
+  const p=migrateProfile(state.seatProfiles[seatIdx]||defaultProfile());
+  const obs={...p.observation};
+  if(type==='vpip'){obs.hands=Math.max(0,obs.hands-1);obs.vpipCount=Math.max(0,obs.vpipCount-1);}
+  else if(type==='fold'){obs.hands=Math.max(0,obs.hands-1);obs.foldCount=Math.max(0,obs.foldCount-1);}
+  else if(type==='call'){obs.vpipCount=Math.max(0,obs.vpipCount-1);}
+  else if(type==='raise'){obs.vpipCount=Math.max(0,obs.vpipCount-1);obs.pfrCount=Math.max(0,obs.pfrCount-1);}
+  else if(type==='threeBet'){obs.vpipCount=Math.max(0,obs.vpipCount-1);obs.pfrCount=Math.max(0,obs.pfrCount-1);obs.threeBetCount=Math.max(0,obs.threeBetCount-1);}
+  state.seatProfiles[seatIdx]={...p,observation:obs,updatedAt:Date.now()};
+  lastObsAction=null;
+  haptic('medium');
+  renderAll();
+  openSheet(seatIdx);
+}
+
+function resetObservation(seatIdx){
+  if(!confirm('この席の観察データをリセットしますか？')) return;
+  const p=migrateProfile(state.seatProfiles[seatIdx]||defaultProfile());
+  state.seatProfiles[seatIdx]={...p,observation:defaultProfile().observation,updatedAt:Date.now()};
+  lastObsAction=null;
+  haptic('medium');
+  renderAll();
+  openSheet(seatIdx);
+}
 
 const BASE_RFI={BTN:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':1,'77':1,'66':1,'55':.8,'44':.6,'33':.45,'22':.35,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':1,'A7s':1,'A6s':1,'A5s':1,'A4s':1,'A3s':1,'A2s':.9,'KQs':1,'KJs':1,'KTs':1,'K9s':1,'K8s':.7,'K7s':.5,'QJs':1,'QTs':1,'Q9s':.7,'Q8s':.4,'JTs':1,'J9s':.8,'J8s':.4,'T9s':1,'T8s':.8,'T7s':.4,'98s':1,'97s':.7,'96s':.3,'87s':1,'86s':.5,'76s':1,'75s':.4,'65s':1,'64s':.3,'54s':.9,'53s':.4,'AKo':1,'AQo':1,'AJo':1,'ATo':1,'A9o':.7,'A8o':.4,'KQo':1,'KJo':1,'KTo':.8,'K9o':.5,'QJo':1,'QTo':.7,'Q9o':.3,'JTo':1,'J9o':.4,'T9o':.5,'98o':.3},CO:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':1,'77':1,'66':.8,'55':.6,'44':.4,'33':.25,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':1,'A7s':.8,'A6s':.7,'A5s':1,'A4s':.7,'A3s':.5,'KQs':1,'KJs':1,'KTs':1,'K9s':.7,'K8s':.4,'QJs':1,'QTs':1,'Q9s':.5,'JTs':1,'J9s':.7,'T9s':1,'T8s':.5,'98s':.8,'87s':.6,'76s':.5,'AKo':1,'AQo':1,'AJo':1,'ATo':.8,'KQo':1,'KJo':1,'KTo':.6,'QJo':1,'QTo':.5,'JTo':.7},HJ:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.8,'77':.6,'66':.4,'55':.3,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':.8,'A7s':.6,'A5s':1,'A4s':.6,'KQs':1,'KJs':1,'KTs':.8,'K9s':.5,'QJs':1,'QTs':1,'Q9s':.4,'JTs':1,'J9s':.5,'T9s':.8,'98s':.5,'87s':.4,'AKo':1,'AQo':1,'AJo':1,'ATo':.6,'KQo':1,'KJo':1,'KTo':.4,'QJo':.7},MP:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.7,'77':.5,'66':.3,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':.8,'A8s':.5,'A5s':.8,'KQs':1,'KJs':1,'KTs':.7,'QJs':1,'QTs':.8,'JTs':1,'T9s':.5,'AKo':1,'AQo':1,'AJo':1,'ATo':.5,'KQo':1,'KJo':.7,'QJo':.5},UTG:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':.9,'88':.6,'77':.4,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':.7,'A5s':.6,'KQs':1,'KJs':1,'KTs':.6,'QJs':1,'QTs':.7,'JTs':1,'AKo':1,'AQo':1,'AJo':.7,'KQo':1},SB:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.9,'77':.7,'66':.5,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':.8,'A5s':1,'A4s':.7,'KQs':1,'KJs':1,'KTs':.9,'K9s':.6,'QJs':1,'QTs':.9,'JTs':1,'AKo':1,'AQo':1,'AJo':1,'ATo':.7,'KQo':1,'KJo':.8,'QJo':.7},BB:{}};
 BASE_RFI['UTG+1']={...BASE_RFI.UTG};BASE_RFI['MP+1']={...BASE_RFI.MP};
@@ -1149,8 +1233,10 @@ function profileColor(i){
 }
 function hasProfile(i){
   const p=profileOf(i);
-  return p.vpip!==1||p.agg!==1||p.skill!==1||p.tends.length>0;
+  const raw=migrateProfile(state.seatProfiles[i]||defaultProfile());
+  return p.vpip!==1||p.agg!==1||p.skill!==1||p.tends.length>0||raw.observation.hands>0;
 }
+
 
 function seatCoords(n){const cx=100,cy=70,rx=82,ry=52;return Array.from({length:n},(_,i)=>{const a=2*Math.PI*(i-state.heroIdx)/n+Math.PI/2;return{x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)}})}
 
@@ -1678,14 +1764,75 @@ function openSheet(i){
   document.getElementById('sheet-title').textContent='Seat '+p;
   document.getElementById('sheet-sub').textContent=dir;
   renderSheetPlayers(i);
+
   const pro=profileOf(i);
-  // Render axis UI
-  document.getElementById('sheet-tags').innerHTML=`
+  const raw=migrateProfile(state.seatProfiles[i]||defaultProfile());
+  const obs=raw.observation;
+  const classified=autoClassify(obs);
+  const hasEnoughSamples=obs.hands>=10;
+  const dimClass=hasEnoughSamples?'axis-dimmed':'';
+
+  // ── セクションA: 統計サマリー ──
+  const typeColor=classified.confidence==='high'?'#4ade80':classified.confidence==='mid'?'#FBBF24':classified.confidence==='low'?'#F97316':'#5a7a5a';
+  const typeBg=classified.confidence==='high'?'#0d2a10':classified.confidence==='mid'?'#1a1200':classified.confidence==='low'?'#1a0f00':'#1a1a1a';
+  const summaryHTML=`
+    <div class="obs-summary">
+      <div class="obs-summary-row">
+        <span class="obs-summary-label">OBSERVATION</span>
+        ${obs.hands>0?`<span class="obs-type-pill" style="background:${typeBg};color:${typeColor};border:1px solid ${typeColor}">${classified.label}</span>`:'<span style="font-size:10px;color:var(--text-muted)">未観察</span>'}
+      </div>
+      <div class="obs-stats">
+        <div class="obs-stat-cell"><div class="obs-stat-label">HANDS</div><div class="obs-stat-value">${obs.hands}</div></div>
+        <div class="obs-stat-cell"><div class="obs-stat-label">VPIP</div><div class="obs-stat-value">${classified.vpipPct??'—'}${classified.vpipPct!==null?'%':''}</div></div>
+        <div class="obs-stat-cell"><div class="obs-stat-label">PFR</div><div class="obs-stat-value">${classified.pfrPct??'—'}${classified.pfrPct!==null?'%':''}</div></div>
+        <div class="obs-stat-cell"><div class="obs-stat-label">3BET</div><div class="obs-stat-value">${classified.threeBetPct??'—'}${classified.threeBetPct!==null?'%':''}</div></div>
+      </div>
+      ${classified.note?`<div class="obs-confidence" style="color:${typeColor}">${classified.note}</div>`:''}
+    </div>`;
+
+  // ── セクションB: カウンターボタン ──
+  const counterHTML=`
+    <div class="obs-counter-grid">
+      ${Object.entries(OBS_TYPES).map(([k,m])=>`
+        <button class="obs-btn" onclick="addObservation(${i},'${k}')">
+          <span class="obs-btn-icon">${m.icon}</span>
+          <span>${m.label}</span>
+          <span class="obs-btn-count">${
+            k==='vpip'?obs.vpipCount:
+            k==='call'?Math.max(0,obs.vpipCount-obs.pfrCount):
+            k==='raise'?Math.max(0,obs.pfrCount-obs.threeBetCount):
+            k==='threeBet'?obs.threeBetCount:
+            obs.foldCount
+          }</span>
+        </button>
+      `).join('')}
+    </div>
+    ${lastObsAction&&lastObsAction.seatIdx===i?`
+      <div class="obs-undo-bar">
+        <span class="obs-undo-bar-label">+1 ${OBS_TYPES[lastObsAction.type].label}</span>
+        <button class="obs-undo-btn" onclick="undoObservation()">↶ Undo</button>
+      </div>
+    `:''}
+    ${obs.hands>0?`
+      <div style="text-align:right;margin:0 16px 10px">
+        <button onclick="resetObservation(${i})" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">観察リセット</button>
+      </div>
+    `:''}`;
+
+  // ── セクションC: 初期値3軸 + D: 特殊傾向 ──
+  const axisNotice=hasEnoughSamples
+    ?`<div class="axis-dimmed-notice">✓ 観察値が十分なため、VPIP/アグレは自動判定中</div>`
+    :`<div style="font-size:10px;color:var(--text-dim);margin-bottom:8px">初期印象をざっくり選択（観察10ハンドで自動上書き）</div>`;
+
+  const axesHTML=`
     <div style="width:100%">
-      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">レンジ幅 (VPIP)</div>
-      <div style="display:flex;gap:4px;margin-bottom:12px">${axisBtn(i,'vpip',VPIP_META,pro.vpip)}</div>
-      <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">⚡ アグレッション</div>
-      <div style="display:flex;gap:4px;margin-bottom:12px">${axisBtn(i,'agg',AGG_META,pro.agg)}</div>
+      ${axisNotice}
+      <div class="${dimClass}">
+        <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">レンジ幅 (VPIP)</div>
+        <div style="display:flex;gap:4px;margin-bottom:12px">${axisBtn(i,'vpip',VPIP_META,pro.vpip)}</div>
+        <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">⚡ アグレッション</div>
+        <div style="display:flex;gap:4px;margin-bottom:12px">${axisBtn(i,'agg',AGG_META,pro.agg)}</div>
+      </div>
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">スキルレベル</div>
       <div style="display:flex;gap:4px;margin-bottom:14px">${axisBtn(i,'skill',SKILL_META,pro.skill)}</div>
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">特殊傾向（複数可）</div>
@@ -1707,12 +1854,17 @@ function openSheet(i){
         </button>`;
       }).join('')}</div>
     </div>`;
+
+  // sheet-tagsにサマリー + カウンター + 軸UIをまとめて注入
+  document.getElementById('sheet-tags').innerHTML=summaryHTML+counterHTML+axesHTML;
+
   document.getElementById('sheet-hint').textContent=
     i===l?'💡 左隣はスティール頻度・3betリスクに影響':
     i===r?'💡 右隣はオープンレンジの慎重度に影響':'💡 全席のプロフィールが距離に応じて補正に反映されます';
   document.getElementById('overlay').classList.add('open');
   document.getElementById('sheet').classList.add('open');
 }
+
 
 function remapProfilesForHeroMove(oldIdx,newIdx){
   const n=state.tableSize;
