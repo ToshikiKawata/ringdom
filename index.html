@@ -235,8 +235,31 @@ button:active{transform:scale(0.94);opacity:0.85}
 .obs-undo-btn{padding:4px 12px;border-radius:5px;font-size:11px;font-weight:700;background:transparent;color:#4ade80;border:1px solid #4ade80;cursor:pointer;font-family:inherit}
 .axis-dimmed{opacity:0.4}
 .axis-dimmed-notice{font-size:10px;color:#4ade80;margin-bottom:6px;display:flex;align-items:center;gap:5px}
-</style>
 
+/* ── 折りたたみセクション (Phase 3) ── */
+.collapse-section{margin:0 16px 10px;border:1px solid var(--border2);border-radius:10px;overflow:hidden;background:var(--surface2)}
+.collapse-header{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;cursor:pointer;user-select:none;-webkit-user-select:none}
+.collapse-header-left{display:flex;align-items:center;gap:8px}
+.collapse-title{font-size:11px;font-weight:700;color:var(--gold);letter-spacing:1.5px}
+.collapse-badge{font-size:10px;padding:2px 8px;border-radius:10px;background:var(--surface3);color:var(--green-accent);border:1px solid #1a5c1a}
+.collapse-chevron{color:var(--text-dim);font-size:12px;transition:transform .2s}
+.collapse-chevron.open{transform:rotate(90deg)}
+.collapse-body{padding:0 14px 14px;display:none}
+.collapse-body.open{display:block}
+
+/* 定性タグ */
+.street-tag-cat{margin-bottom:10px}
+.street-tag-cat-label{font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.street-tag-cat-icon{font-size:11px;color:var(--gold)}
+.street-tag-row{display:flex;flex-wrap:wrap;gap:5px}
+.street-tag-btn{padding:6px 10px;border-radius:14px;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;background:transparent;border:1px solid var(--border2);color:var(--text-dim);transition:all .12s}
+.street-tag-btn.active{background:var(--surface3);font-weight:700}
+
+/* メモ欄 */
+.note-textarea{width:100%;min-height:80px;padding:10px 12px;border-radius:8px;background:var(--surface3);border:1px solid var(--border2);color:var(--text);font-family:inherit;font-size:12px;line-height:1.6;resize:vertical;outline:none;-webkit-appearance:none}
+.note-textarea:focus{border-color:var(--gold-dim)}
+.note-hint{font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.5}
+</style>
 
 <!-- ── Onboarding ── -->
 
@@ -822,7 +845,38 @@ const TEND_META={
             desc:'プレミアムハンドしかプレイしない超タイト。3-betには必ずフォールド。スティール最大化。'},
 };
 const ALL_TENDS=Object.keys(TEND_META);
-// デフォルトプロフィール
+// ── 定性タグ（ストリート別・状況別） ──
+const STREET_TAG_META={
+  // プリフロップ
+  pf_limper:     {cat:'PF',label:'リンパー',       color:'#94A3B8'},
+  pf_stealer:    {cat:'PF',label:'スチーラー',     color:'#F97316'},
+  pf_3bettor:    {cat:'PF',label:'3Bet厨',         color:'#818CF8'},
+  pf_cold_caller:{cat:'PF',label:'コールドコーラー',color:'#FBBF24'},
+  // フロップ
+  flop_cbet_high:{cat:'F', label:'Cbet高頻度',     color:'#f87171'},
+  flop_checkraiser:{cat:'F',label:'チェックレイザー',color:'#a78bfa'},
+  flop_donk:     {cat:'F', label:'ドンクベット多', color:'#ca8a04'},
+  // ターン
+  turn_barrel:   {cat:'T', label:'バレル2連打',    color:'#f87171'},
+  turn_checkback:{cat:'T', label:'ターンC-Back',   color:'#94A3B8'},
+  turn_cr:       {cat:'T', label:'ターンC-Raise',  color:'#a78bfa'},
+  // リバー
+  river_value:   {cat:'R', label:'バリューのみ',   color:'#4ade80'},
+  river_bluff:   {cat:'R', label:'ブラフ多',       color:'#f87171'},
+  river_unknown: {cat:'R', label:'リバー不明',     color:'#5a7a5a'},
+  // ドロー対応
+  draw_barrel:   {cat:'D', label:'ドローでバレル', color:'#F97316'},
+  draw_slowdown: {cat:'D', label:'ドローで減速',   color:'#60A5FA'},
+  draw_unknown:  {cat:'D', label:'ドロー不明',     color:'#5a7a5a'},
+};
+const STREET_TAG_CATS={
+  PF:{label:'プリフロップ',icon:'♠'},
+  F: {label:'フロップ',    icon:'♦'},
+  T: {label:'ターン',      icon:'♥'},
+  R: {label:'リバー',      icon:'♣'},
+  D: {label:'ドロー対応',  icon:'◆'},
+};
+  // デフォルトプロフィール
 function defaultProfile(){
   return{
     vpip:1,agg:1,skill:1,tends:[],
@@ -969,6 +1023,46 @@ function resetObservation(seatIdx){
   haptic('medium');
   renderAll();
   openSheet(seatIdx);
+}
+
+// ── 折りたたみセクションの開閉状態管理 ──
+function getCollapseState(key){
+  return localStorage.getItem('ra_collapse_'+key)==='1';
+}
+function setCollapseState(key,open){
+  if(open) localStorage.setItem('ra_collapse_'+key,'1');
+  else localStorage.removeItem('ra_collapse_'+key);
+}
+function toggleCollapse(key){
+  const open=!getCollapseState(key);
+  setCollapseState(key,open);
+  const body=document.getElementById('collapse-body-'+key);
+  const chev=document.getElementById('collapse-chev-'+key);
+  if(body) body.classList.toggle('open',open);
+  if(chev) chev.classList.toggle('open',open);
+}
+
+// ── 定性タグのトグル ──
+function toggleStreetTag(seatIdx,tagKey){
+  const p=migrateProfile(state.seatProfiles[seatIdx]||defaultProfile());
+  const tags=p.streetTags||[];
+  const newTags=tags.includes(tagKey)?tags.filter(t=>t!==tagKey):[...tags,tagKey];
+  state.seatProfiles[seatIdx]={...p,streetTags:newTags,updatedAt:Date.now()};
+  haptic('light');
+  renderAll();
+  // シートを閉じずに再描画するが、折りたたみ状態を保つために一部だけ更新
+  openSheet(seatIdx);
+}
+
+// ── メモの更新（debounce付き） ──
+let noteUpdateTimer=null;
+function updateNote(seatIdx,value){
+  if(noteUpdateTimer) clearTimeout(noteUpdateTimer);
+  noteUpdateTimer=setTimeout(()=>{
+    const p=migrateProfile(state.seatProfiles[seatIdx]||defaultProfile());
+    state.seatProfiles[seatIdx]={...p,note:value,updatedAt:Date.now()};
+    // renderAll を呼ばない（テキストエリアからフォーカスが外れる問題を回避）
+  },300);
 }
 
 const BASE_RFI={BTN:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':1,'77':1,'66':1,'55':.8,'44':.6,'33':.45,'22':.35,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':1,'A7s':1,'A6s':1,'A5s':1,'A4s':1,'A3s':1,'A2s':.9,'KQs':1,'KJs':1,'KTs':1,'K9s':1,'K8s':.7,'K7s':.5,'QJs':1,'QTs':1,'Q9s':.7,'Q8s':.4,'JTs':1,'J9s':.8,'J8s':.4,'T9s':1,'T8s':.8,'T7s':.4,'98s':1,'97s':.7,'96s':.3,'87s':1,'86s':.5,'76s':1,'75s':.4,'65s':1,'64s':.3,'54s':.9,'53s':.4,'AKo':1,'AQo':1,'AJo':1,'ATo':1,'A9o':.7,'A8o':.4,'KQo':1,'KJo':1,'KTo':.8,'K9o':.5,'QJo':1,'QTo':.7,'Q9o':.3,'JTo':1,'J9o':.4,'T9o':.5,'98o':.3},CO:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':1,'77':1,'66':.8,'55':.6,'44':.4,'33':.25,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':1,'A7s':.8,'A6s':.7,'A5s':1,'A4s':.7,'A3s':.5,'KQs':1,'KJs':1,'KTs':1,'K9s':.7,'K8s':.4,'QJs':1,'QTs':1,'Q9s':.5,'JTs':1,'J9s':.7,'T9s':1,'T8s':.5,'98s':.8,'87s':.6,'76s':.5,'AKo':1,'AQo':1,'AJo':1,'ATo':.8,'KQo':1,'KJo':1,'KTo':.6,'QJo':1,'QTo':.5,'JTo':.7},HJ:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.8,'77':.6,'66':.4,'55':.3,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':.8,'A7s':.6,'A5s':1,'A4s':.6,'KQs':1,'KJs':1,'KTs':.8,'K9s':.5,'QJs':1,'QTs':1,'Q9s':.4,'JTs':1,'J9s':.5,'T9s':.8,'98s':.5,'87s':.4,'AKo':1,'AQo':1,'AJo':1,'ATo':.6,'KQo':1,'KJo':1,'KTo':.4,'QJo':.7},MP:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.7,'77':.5,'66':.3,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':.8,'A8s':.5,'A5s':.8,'KQs':1,'KJs':1,'KTs':.7,'QJs':1,'QTs':.8,'JTs':1,'T9s':.5,'AKo':1,'AQo':1,'AJo':1,'ATo':.5,'KQo':1,'KJo':.7,'QJo':.5},UTG:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':.9,'88':.6,'77':.4,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':.7,'A5s':.6,'KQs':1,'KJs':1,'KTs':.6,'QJs':1,'QTs':.7,'JTs':1,'AKo':1,'AQo':1,'AJo':.7,'KQo':1},SB:{'AA':1,'KK':1,'QQ':1,'JJ':1,'TT':1,'99':1,'88':.9,'77':.7,'66':.5,'AKs':1,'AQs':1,'AJs':1,'ATs':1,'A9s':1,'A8s':.8,'A5s':1,'A4s':.7,'KQs':1,'KJs':1,'KTs':.9,'K9s':.6,'QJs':1,'QTs':.9,'JTs':1,'AKo':1,'AQo':1,'AJo':1,'ATo':.7,'KQo':1,'KJo':.8,'QJo':.7},BB:{}};
@@ -1243,7 +1337,10 @@ function profileColor(i){
 function hasProfile(i){
   const p=profileOf(i);
   const raw=migrateProfile(state.seatProfiles[i]||defaultProfile());
-  return p.vpip!==1||p.agg!==1||p.skill!==1||p.tends.length>0||raw.observation.hands>0;
+  return p.vpip!==1||p.agg!==1||p.skill!==1||p.tends.length>0||
+    raw.observation.hands>0||
+    (raw.streetTags&&raw.streetTags.length>0)||
+    (raw.note&&raw.note.length>0);
 }
 
 
@@ -1892,8 +1989,73 @@ function openSheet(i){
       }).join('')}</div>
     </div>`;
 
-  // sheet-tagsにサマリー + カウンター + 軸UIをまとめて注入
-  document.getElementById('sheet-tags').innerHTML=summaryHTML+counterHTML+axesHTML;
+  // ── セクションE: 定性タグ（折りたたみ） ──
+  const streetTags=raw.streetTags||[];
+  const eOpen=getCollapseState('street-tags');
+  const tagCountStr=streetTags.length>0?`<span class="collapse-badge">${streetTags.length}件</span>`:'';
+  const tagsByCategory={};
+  Object.entries(STREET_TAG_META).forEach(([k,m])=>{
+    if(!tagsByCategory[m.cat]) tagsByCategory[m.cat]=[];
+    tagsByCategory[m.cat].push({key:k,...m});
+  });
+  const streetTagsHTML=`
+    <div class="collapse-section">
+      <div class="collapse-header" onclick="toggleCollapse('street-tags')">
+        <div class="collapse-header-left">
+          <span class="collapse-title">定性タグ</span>
+          ${tagCountStr}
+        </div>
+        <span id="collapse-chev-street-tags" class="collapse-chevron${eOpen?' open':''}">▶</span>
+      </div>
+      <div id="collapse-body-street-tags" class="collapse-body${eOpen?' open':''}">
+        ${Object.entries(STREET_TAG_CATS).map(([cat,catMeta])=>{
+          const tagsInCat=tagsByCategory[cat]||[];
+          if(tagsInCat.length===0) return '';
+          return `<div class="street-tag-cat">
+            <div class="street-tag-cat-label">
+              <span class="street-tag-cat-icon">${catMeta.icon}</span>
+              ${catMeta.label}
+            </div>
+            <div class="street-tag-row">
+              ${tagsInCat.map(t=>{
+                const active=streetTags.includes(t.key);
+                const bg=active?t.color+'22':'transparent';
+                const border=active?t.color:'var(--border2)';
+                const color=active?t.color:'var(--text-dim)';
+                return `<button class="street-tag-btn${active?' active':''}"
+                  onclick="toggleStreetTag(${i},'${t.key}')"
+                  style="background:${bg};border-color:${border};color:${color}">${t.label}</button>`;
+              }).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+
+  // ── セクションF: メモ欄（折りたたみ） ──
+  const noteValue=raw.note||'';
+  const fOpen=getCollapseState('note')||noteValue.length>0;
+  const noteBadge=noteValue.length>0?`<span class="collapse-badge">${noteValue.length}文字</span>`:'';
+  const noteHTML=`
+    <div class="collapse-section">
+      <div class="collapse-header" onclick="toggleCollapse('note')">
+        <div class="collapse-header-left">
+          <span class="collapse-title">メモ</span>
+          ${noteBadge}
+        </div>
+        <span id="collapse-chev-note" class="collapse-chevron${fOpen?' open':''}">▶</span>
+      </div>
+      <div id="collapse-body-note" class="collapse-body${fOpen?' open':''}">
+        <textarea class="note-textarea" id="note-textarea-${i}"
+          oninput="updateNote(${i},this.value)"
+          placeholder="例: さっきAKでオーバーベットブラフ打ってきた&#10;前回対戦時はフラドロでオールイン見せた">${noteValue.replace(/</g,'&lt;')}</textarea>
+        <div class="note-hint">自由に観察を記録できます。次回同じ相手と当たった時の武器になります。</div>
+      </div>
+    </div>`;
+
+  // sheet-tagsにサマリー + カウンター + 軸UI + 定性タグ + メモをまとめて注入
+  document.getElementById('sheet-tags').innerHTML=
+    summaryHTML+counterHTML+axesHTML+streetTagsHTML+noteHTML;
 
   document.getElementById('sheet-hint').textContent=
     i===l?'💡 左隣はスティール頻度・3betリスクに影響':
@@ -1901,7 +2063,6 @@ function openSheet(i){
   document.getElementById('overlay').classList.add('open');
   document.getElementById('sheet').classList.add('open');
 }
-
 
 function remapProfilesForHeroMove(oldIdx,newIdx){
   const n=state.tableSize;
