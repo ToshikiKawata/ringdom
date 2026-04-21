@@ -1596,18 +1596,23 @@ function savePlayer(){
   const name=input.value.trim();
   if(!name)return;
   const seatIdx=state.activeSheet;if(seatIdx===null)return;
-  const profile=profileOf(seatIdx);
+  // profileOf ではなく raw データを保存する
+  // (profileOfは観察値による自動上書き後の値を返してしまうため、
+  //  手動設定値が失われる)
+  const rawProfile=migrateProfile(state.seatProfiles[seatIdx]);
   if(!hasProfile(seatIdx)){alert('プロフィールを設定してください');return;}
   const players=loadPlayers();
   const idx=players.findIndex(p=>p.name===name);
-  if(idx>=0)players[idx]={name,profile};
-  else players.push({name,profile});
+  // 保存時は name を含めない (プレイヤー帳のエントリ名として別管理)
+  const{name:_,...profileToSave}=rawProfile;
+  if(idx>=0)players[idx]={name,profile:profileToSave};
+  else players.push({name,profile:profileToSave});
   savePlayers(players);
   // 保存と同時にそのシートに適用
-  state.seatProfiles[seatIdx]={...profile,name};
+  state.seatProfiles[seatIdx]={...rawProfile,name};
   input.value='';
   renderAll();
-  closeSheet(); // シートを閉じて即時反映
+  closeSheet();
 }
 
 function deletePlayer(playerName){
