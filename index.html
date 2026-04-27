@@ -1340,11 +1340,6 @@ function profileColor(i){
   if(p.tends.includes('maniac'))  return TEND_META.maniac.color;
   if(p.tends.includes('folder'))  return TEND_META.folder.color;
   if(p.tends.includes('station')) return TEND_META.station.color;
-  // 手動軸が全部デフォルト(普通)かつ観察データのみの場合は見えやすいゴールド系を返す
-  const raw=migrateProfile(state.seatProfiles[i]||defaultProfile());
-  const noManual=p.vpip===1&&p.agg===1&&p.skill===1&&p.tends.length===0;
-  const hasObs=(raw.observation?.hands||0)>0;
-  if(noManual&&hasObs) return '#c9a227'; // gold
   return VPIP_META[p.vpip].color;
 }
 
@@ -1506,40 +1501,14 @@ function renderTable(){
       g.appendChild(nt);
     }
 
-        // プロフィールドット + 観察ハンド数リング
+    // プロフィールドット
     if(hasPro){
-      const raw=migrateProfile(state.seatProfiles[i]||defaultProfile());
-      const hands=raw.observation?.hands||0;
-      const color=profileColor(i);
-
-      // ── 外側リング（観察ハンド数に応じて） ──
-      if(hands>=10){
-        const ringW=hands>=25?1.2:0.7; // 25+で太く、10-24で細く
-        const ringR=hands>=25?5:4.2;
-        const ring=document.createElementNS(NS,'circle');
-        ring.setAttribute('cx',x+7);ring.setAttribute('cy',y-7);
-        ring.setAttribute('r',ringR);
-        ring.setAttribute('fill','none');
-        ring.setAttribute('stroke',color);
-        ring.setAttribute('stroke-width',ringW);
-        ring.setAttribute('opacity','0.85');
-        g.appendChild(ring);
-      }
-
-      // ── 本体ドット ──
-      let dotR,dotOpacity;
-      if(hands===0){dotR=3;dotOpacity=1;}
-      else if(hands<5){dotR=2.2;dotOpacity=0.55;}
-      else{dotR=3;dotOpacity=1;}
-
       const d=document.createElementNS(NS,'circle');
-      d.setAttribute('cx',x+7);d.setAttribute('cy',y-7);d.setAttribute('r',dotR);
-      d.setAttribute('fill',color);
-      d.setAttribute('opacity',dotOpacity);
-      d.style.cursor='pointer';
-      d.addEventListener('click',()=>openSheet(i));
-      g.appendChild(d);
+      d.setAttribute('cx',x+7);d.setAttribute('cy',y-7);d.setAttribute('r','3');
+      d.setAttribute('fill',profileColor(i));d.style.cursor='pointer';
+      d.addEventListener('click',()=>openSheet(i));g.appendChild(d);
     }
+
 
 
     // タッチ処理: ダブルタップ→Hero, シングル→openSheet
