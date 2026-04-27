@@ -1334,16 +1334,14 @@ function profileColor(i){
   if(p.tends.includes('station')) return TEND_META.station.color;
   return VPIP_META[p.vpip].color;
 }
-function profileColor(i){
+function hasProfile(i){
+  const raw=migrateProfile(state.seatProfiles[i]||defaultProfile());
   const p=profileOf(i);
-  if(p.tends.includes('nitroll')) return TEND_META.nitroll.color;
-  if(p.tends.includes('maniac'))  return TEND_META.maniac.color;
-  if(p.tends.includes('folder'))  return TEND_META.folder.color;
-  if(p.tends.includes('station')) return TEND_META.station.color;
-  return VPIP_META[p.vpip].color;
+  return p.vpip!==1||p.agg!==1||p.skill!==1||p.tends.length>0||
+    raw.observation.hands>0||
+    (raw.streetTags&&raw.streetTags.length>0)||
+    (raw.note&&raw.note.length>0);
 }
-
-
 
 function seatCoords(n){const cx=100,cy=70,rx=82,ry=52;return Array.from({length:n},(_,i)=>{const a=2*Math.PI*(i-state.heroIdx)/n+Math.PI/2;return{x:cx+rx*Math.cos(a),y:cy+ry*Math.sin(a)}})}
 
