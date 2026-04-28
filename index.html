@@ -3658,8 +3658,8 @@ function updateEvalBtn(){
     const remaining=getRemainingEvals();
     if(remaining===0){
       remainingLabel=' (今月の上限到達)';
-    } else if(remaining<=3){
-      remainingLabel=` (残り${remaining}回)`;
+    } else {
+      remainingLabel=` (残り${remaining}/${FREE_EVAL_LIMIT}回)`;
     }
   }
 
