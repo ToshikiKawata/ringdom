@@ -59,6 +59,7 @@ export default async function handler(req) {
         max_tokens: body.max_tokens || 1000,
         system: body.system,
         messages: body.messages,
+        temperature: 0.3,
       }),
     });
 
