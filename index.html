@@ -3651,9 +3651,24 @@ function updateEvalBtn(){
   btn.style.background=ready?'var(--gold)':'#1a2a1a';
   btn.style.color=ready?'#0a1a0a':'#4a6a4a';
   btn.style.cursor=ready?'pointer':'default';
-  btn.textContent=ready?'AIに評価してもらう':'AIに評価してもらう（ハンドとアクションを入力してください）';
+
+  // 残り回数の表示(Free版のみ)
+  let remainingLabel='';
+  if(!isPro()){
+    const remaining=getRemainingEvals();
+    if(remaining===0){
+      remainingLabel=' (今月の上限到達)';
+    } else if(remaining<=3){
+      remainingLabel=` (残り${remaining}回)`;
+    }
+  }
+
+  btn.textContent=ready
+    ?'AIに評価してもらう'+remainingLabel
+    :'AIに評価してもらう(ハンドとアクションを入力してください)';
 }
-function buildTableContext(){
+  
+  function buildTableContext(){
   const p=pos();
   const lines=[];
   lines.push(`テーブル: ${state.tableSize}max, Hero: ${heroPos()}, レーキ: ${state.rake}%`);
@@ -3820,16 +3835,32 @@ if(blockers.length) lines.push('ブロッカー: '+blockers.join(' / '));
 
   return lines.join('\n');
 }
-  
+
+  // 作業3で正式モーダルに置き換える(仮実装)
+function showEvalLimitModal(){
+  const usage=getEvalUsage();
+  const msg=`AI評価の月次上限(${FREE_EVAL_LIMIT}回)に到達しました。\n\n`
+    +`今月の使用: ${usage.count}回\n`
+    +`次回リセット: 来月1日\n\n`
+    +`Pro版にアップグレードすると無制限でご利用いただけます。`;
+  alert(msg);
+}
+
 async function evaluatePlay(){
   const hand=getHandString();
   const board=getBoardString();
-  const stack=state.stackSize+'BB（レンジ設定より）';
+  const stack=state.stackSize+'BB(レンジ設定より)';
   const action=buildActionString();
   const street=currentStreet;
 
   if(heroCards.filter(Boolean).length<2){alert('ハンドを2枚選択してください');return;}
 
+  // ── 月次上限チェック(Free版) ──
+  if(!canEvaluate()){
+    showEvalLimitModal();
+    return;
+  }
+  
   // プリフロップのアクションが最低1つ必要
   const preflopActions=actionLog.filter(e=>e.type==='action'&&!e.auto);
   const hasStreet=actionLog.some(e=>e.type==='street');
@@ -3929,6 +3960,10 @@ ${actionStr}
       comment
     });
 
+    // 月次使用回数を増加(Pro版以外)
+    if(!isPro()) incrementEvalUsage();
+    updateEvalBtn(); // ボタン表示を更新(残り回数の表示等)
+    
   }catch(e){
     document.getElementById('eval-result').style.display='block';
     document.getElementById('eval-comment').textContent=
@@ -4565,6 +4600,56 @@ function downloadImage(canvas){
   a.href=canvas.toDataURL('image/png');
   a.click();
 }
+// ── Pro/Free 状態管理 ──
+function isPro(){
+  // 将来Stripeで認証実装する。今はlocalStorageベース
+  return localStorage.getItem('ra_pro')==='1';
+}
+function setPro(v){
+  if(v) localStorage.setItem('ra_pro','1');
+  else localStorage.removeItem('ra_pro');
+}
+
+// ── AI評価の月次使用回数管理 ──
+const FREE_EVAL_LIMIT=10; // Freeユーザーの月次上限
+
+function getCurrentYearMonth(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+
+function getEvalUsage(){
+  try{
+    const raw=localStorage.getItem('ra_eval_usage');
+    if(!raw) return {yearMonth:getCurrentYearMonth(),count:0};
+    const data=JSON.parse(raw);
+    // 月が変わっていたらリセット
+    if(data.yearMonth!==getCurrentYearMonth()){
+      return {yearMonth:getCurrentYearMonth(),count:0};
+    }
+    return data;
+  }catch{
+    return {yearMonth:getCurrentYearMonth(),count:0};
+  }
+}
+
+function incrementEvalUsage(){
+  const usage=getEvalUsage();
+  usage.count++;
+  try{localStorage.setItem('ra_eval_usage',JSON.stringify(usage));}catch{}
+  return usage;
+}
+
+function getRemainingEvals(){
+  if(isPro()) return Infinity;
+  const usage=getEvalUsage();
+  return Math.max(0,FREE_EVAL_LIMIT-usage.count);
+}
+
+function canEvaluate(){
+  return isPro()||getRemainingEvals()>0;
+}
+  
 function loadEvalHistory(){
   try{return JSON.parse(localStorage.getItem('ringdom_eval_history')||'[]');}catch{return[];}
 }
