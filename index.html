@@ -801,6 +801,57 @@ style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700
   </div>
 </div>
 
+<!-- AI Evaluation Limit Modal -->
+<div id="eval-limit-overlay" onclick="closeEvalLimitModal()" style="position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:300;opacity:0;pointer-events:none;transition:opacity .25s;display:flex;align-items:flex-end;justify-content:center">
+  <div id="eval-limit-modal" onclick="event.stopPropagation()" style="width:100%;max-width:480px;background:#0d1f0d;border-top:2px solid #c9a227;border-radius:18px 18px 0 0;padding:20px 20px 32px;transform:translateY(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);max-height:85vh;overflow-y:auto">
+    <div style="width:36px;height:4px;background:#2a4a2a;border-radius:2px;margin:0 auto 16px"></div>
+
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="font-size:32px;margin-bottom:6px">🌟</div>
+      <div style="font-size:16px;font-weight:800;color:#c9a227;letter-spacing:1px">AI評価の上限に到達</div>
+    </div>
+
+    <div id="eval-limit-info" style="background:#0d1a0d;border:1px solid #2a4a2a;border-radius:10px;padding:12px 14px;margin-bottom:14px;text-align:center">
+      <div style="font-size:12px;color:#a0c0a0;line-height:1.7">
+        今月の AI評価 (<span id="eval-limit-used">10</span>回) を使い切りました
+      </div>
+      <div style="font-size:11px;color:#5a7a5a;margin-top:4px">
+        次回リセット: <span id="eval-limit-reset"></span>
+      </div>
+    </div>
+
+    <div style="background:#1a1200;border:1px solid #c9a227;border-radius:12px;padding:14px;margin-bottom:14px">
+      <div style="font-size:11px;color:#c9a227;font-weight:700;letter-spacing:1.5px;margin-bottom:10px">⭐ Pro にアップグレードすると</div>
+      <div style="font-size:12px;color:#e8d8a0;line-height:2;margin-bottom:12px">
+        ✨ AI評価 <span style="color:#c9a227;font-weight:700">無制限</span><br>
+        ✨ プレイヤー帳 <span style="color:#c9a227;font-weight:700">無制限</span><br>
+        ✨ リーク分析(自動弱点抽出)<br>
+        ✨ 評価履歴 全件クラウド保存<br>
+        ✨ 新機能への優先アクセス
+      </div>
+      <div style="text-align:center;padding-top:10px;border-top:1px solid #5a4010">
+        <div style="font-size:18px;font-weight:800;color:#c9a227">¥980 / 月</div>
+        <div style="font-size:11px;color:#7a6010;margin-top:2px">または ¥9,800 / 年(2ヶ月分お得)</div>
+        <div style="display:inline-block;background:#0d1a2a;border:1px solid #1e3a5f;border-radius:14px;padding:3px 10px;margin-top:8px">
+          <span style="font-size:10px;color:#60A5FA;font-weight:700">⭐ Earlybird価格 永久固定</span>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="onProUpgradeClick()" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#c9a227;color:#0a1a0a;border:none;margin-bottom:8px">
+      Proにアップグレード
+    </button>
+    <button onclick="closeEvalLimitModal()" style="width:100%;padding:11px;border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;background:transparent;color:#5a7a5a;border:1px solid #2a4a2a">
+      来月まで待つ
+    </button>
+
+    <div style="font-size:10px;color:#3a5a3a;text-align:center;margin-top:14px;line-height:1.7;background:#1a0f00;border:1px solid #4a3a00;border-radius:6px;padding:8px">
+      ※ 現在ベータ版のため、課金機能は準備中です。<br>
+      Pro機能をご希望の方は、このボタンを押してフィードバックを送ってください。
+    </div>
+  </div>
+</div>
+
 <div class="sheet-overlay" id="overlay" onclick="closeSheet()"></div>
 <div class="sheet" id="sheet">
   <div class="sheet-handle"></div>
@@ -3836,16 +3887,40 @@ if(blockers.length) lines.push('ブロッカー: '+blockers.join(' / '));
   return lines.join('\n');
 }
 
-  // 作業3で正式モーダルに置き換える(仮実装)
 function showEvalLimitModal(){
   const usage=getEvalUsage();
-  const msg=`AI評価の月次上限(${FREE_EVAL_LIMIT}回)に到達しました。\n\n`
-    +`今月の使用: ${usage.count}回\n`
-    +`次回リセット: 来月1日\n\n`
-    +`Pro版にアップグレードすると無制限でご利用いただけます。`;
-  alert(msg);
+  // 次回リセット日を計算(来月1日)
+  const today=new Date();
+  const nextMonth=new Date(today.getFullYear(),today.getMonth()+1,1);
+  const resetStr=`${nextMonth.getMonth()+1}月${nextMonth.getDate()}日`;
+
+  document.getElementById('eval-limit-used').textContent=usage.count;
+  document.getElementById('eval-limit-reset').textContent=resetStr;
+
+  haptic('medium');
+  const ov=document.getElementById('eval-limit-overlay');
+  const mo=document.getElementById('eval-limit-modal');
+  ov.style.opacity='1';ov.style.pointerEvents='all';
+  mo.style.transform='translateY(0)';
 }
 
+function closeEvalLimitModal(){
+  const ov=document.getElementById('eval-limit-overlay');
+  const mo=document.getElementById('eval-limit-modal');
+  ov.style.opacity='0';ov.style.pointerEvents='none';
+  mo.style.transform='translateY(100%)';
+}
+
+function onProUpgradeClick(){
+  // 現状は課金未実装なので、フィードバックフォームへ誘導
+  // 将来Stripe実装したらここを置き換える
+  closeEvalLimitModal();
+  setTimeout(()=>{
+    if(confirm('Pro機能はベータ版のため準備中です。\n\nリリース時に通知を希望される方は、開発者にメッセージを送れます。\n\nメールクライアントを開きますか?')){
+      window.location.href='mailto:jubei.animal@gmail.com?subject=Ringdom%20Pro%20リリース通知希望&body=Pro版リリース時に通知を希望します。';
+    }
+  },300);
+}
 async function evaluatePlay(){
   const hand=getHandString();
   const board=getBoardString();
