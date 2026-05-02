@@ -422,32 +422,22 @@ button:active{transform:scale(0.94);opacity:0.85}
 <div class="header">
   <div>
     <div class="header-title">♠ RINGDOM</div>
-
   </div>
-  <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">
-    <div class="size-btns">
-      <button class="size-btn active" onclick="setTableSize(6)">6max</button>
-      <button class="size-btn" onclick="setTableSize(7)">7</button>
-      <button class="size-btn" onclick="setTableSize(8)">8</button>
-      <button class="size-btn" onclick="setTableSize(9)">9</button>
-    </div>
-    <div class="size-btns">
-      <button id="rake-5" onclick="setRake(5)" style="padding:5px 10px;border-radius:4px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:1px solid var(--gold)">RAKE 5%</button>
-      <button id="rake-10" onclick="setRake(10)" style="padding:5px 10px;border-radius:4px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#f87171;border:1px solid #7a3a3a">RAKE 10%</button>
-    </div>
-  </div>
+  <button id="hamburger-btn" onclick="openHamburger()" aria-label="メニュー"
+    style="background:transparent;border:1px solid var(--border2);color:var(--gold);width:38px;height:38px;border-radius:8px;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:3px;padding:0">
+    <span style="display:block;width:18px;height:2px;background:var(--gold);border-radius:1px"></span>
+    <span style="display:block;width:18px;height:2px;background:var(--gold);border-radius:1px"></span>
+    <span style="display:block;width:18px;height:2px;background:var(--gold);border-radius:1px"></span>
+  </button>
 </div>
 
 <div class="tabbar">
-  <div class="tab active" id="tab-table" onclick="switchTab('table')" style="font-size:10px;white-space:nowrap">テーブル</div>
-  <div class="tab" id="tab-log" onclick="switchTab('log')" style="font-size:10px;white-space:nowrap">LOG</div>
-  <div class="tab" id="tab-range" onclick="switchTab('range')" style="font-size:10px;white-space:nowrap">レンジ</div>
-  <div class="tab" id="tab-eq" onclick="switchTab('eq')" style="font-size:10px;white-space:nowrap">EQ</div>
-  <div class="tab" id="tab-book" onclick="switchTab('book')" style="font-size:10px;white-space:nowrap">Players</div>
+  <div class="tab active" id="tab-log" onclick="switchTab('log')" style="font-size:11px">📝 ログ</div>
+  <div class="tab" id="tab-book" onclick="switchTab('book')" style="font-size:11px">👥 Players</div>
 </div>
 
 <div class="content">
-  <div class="panel active" id="panel-table">
+  <div class="panel" id="panel-table">
     <div class="table-wrap">
       <div class="table-svg-container">
         <svg id="table-svg" viewBox="0 0 200 140" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
@@ -547,7 +537,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 
   <!-- ── Play Log Panel ── -->
 
-  <div class="panel" id="panel-log" style="background:var(--green-dark);padding:12px 16px 20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-y:auto">
+  <div class="panel active" id="panel-log" style="background:var(--green-dark);padding:12px 16px 20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-y:auto">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
       <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px">PLAY LOG</div>
     </div>
@@ -849,6 +839,52 @@ style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700
       ※ 現在ベータ版のため、課金機能は準備中です。<br>
       Pro機能をご希望の方は、このボタンを押してフィードバックを送ってください。
     </div>
+  </div>
+</div>
+
+<!-- Hamburger Menu Overlay -->
+<div id="hamburger-overlay" onclick="closeHamburger()" style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:250;opacity:0;pointer-events:none;transition:opacity .25s"></div>
+<div id="hamburger-panel" style="position:fixed;top:0;right:0;bottom:0;width:78%;max-width:320px;background:#0d1f0d;border-left:1.5px solid var(--gold-dim);z-index:251;transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);padding:0;overflow-y:auto;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)">
+  <div style="padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+    <div style="font-size:13px;font-weight:700;color:var(--gold);letter-spacing:2px">MENU</div>
+    <button onclick="closeHamburger()" style="background:transparent;border:none;color:var(--text-dim);font-size:18px;cursor:pointer;padding:4px 8px">✕</button>
+  </div>
+
+  <div style="padding:14px 20px 8px;font-size:9px;color:var(--text-dim);letter-spacing:1.5px">補助ツール</div>
+  <button onclick="openRangeFromMenu()" style="width:100%;text-align:left;padding:13px 20px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+    <span>📊 レンジ表</span><span style="color:var(--text-dim);font-size:11px">›</span>
+  </button>
+  <button onclick="openEqFromMenu()" style="width:100%;text-align:left;padding:13px 20px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+    <span>♠ エクイティ計算</span><span style="color:var(--text-dim);font-size:11px">›</span>
+  </button>
+
+  <div style="padding:14px 20px 8px;font-size:9px;color:var(--text-dim);letter-spacing:1.5px">テーブル設定</div>
+  <div style="padding:8px 20px 14px;border-bottom:1px solid var(--border)">
+    <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px">人数</div>
+    <div class="size-btns" style="margin-bottom:10px">
+      <button class="size-btn active" onclick="setTableSize(6)">6max</button>
+      <button class="size-btn" onclick="setTableSize(7)">7</button>
+      <button class="size-btn" onclick="setTableSize(8)">8</button>
+      <button class="size-btn" onclick="setTableSize(9)">9</button>
+    </div>
+    <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px">レーキ</div>
+    <div class="size-btns">
+      <button id="rake-5" onclick="setRake(5)" style="padding:5px 10px;border-radius:4px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:var(--gold);color:#0a1a0a;border:1px solid var(--gold)">RAKE 5%</button>
+      <button id="rake-10" onclick="setRake(10)" style="padding:5px 10px;border-radius:4px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:#f87171;border:1px solid #7a3a3a">RAKE 10%</button>
+    </div>
+  </div>
+
+  <div style="padding:14px 20px 8px;font-size:9px;color:var(--text-dim);letter-spacing:1.5px">その他</div>
+  <button onclick="resetOnboarding()" style="width:100%;text-align:left;padding:13px 20px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer">
+    🔄 使い方を再表示
+  </button>
+  <button onclick="window.location.href='mailto:jubei.animal@gmail.com?subject=Ringdom%20フィードバック'" style="width:100%;text-align:left;padding:13px 20px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer">
+    ✉ フィードバック
+  </button>
+
+  <div style="padding:20px;color:var(--text-muted);font-size:10px;text-align:center;line-height:1.7">
+    Ringdom v2.1.0<br>
+    β版
   </div>
 </div>
 
@@ -1337,7 +1373,7 @@ function computeAdj(){
   return{adj,rMult};
 }
 
-let state={tableSize:6,heroIdx:0,seatProfiles:{},activeSheet:null,currentTab:'table',rake:5,scenario:'RFI',stackSize:100};
+let state={tableSize:6,heroIdx:0,seatProfiles:{},activeSheet:null,currentTab:'log',rake:5,scenario:'RFI',stackSize:100};
 
 // ── スタックサイズ別レンジ補正 ─────────────────────────────────
 // ベース頻度を5カテゴリに分類し、スタックサイズ別に乗数を適用。
@@ -2907,28 +2943,31 @@ function closeExploitModal(){
   ov.style.opacity='0';ov.style.pointerEvents='none';
   mo.style.transform='translateY(100%)';
 }
-
+  
 function switchTab(tab){
   state.currentTab=tab;
-  // Normal panels inside content div
-  ['table','range','book','log'].forEach(t=>{
+  // メインタブ(log/book) と 隠しタブ(range) を扱う
+  ['range','book','log'].forEach(t=>{
     const p=document.getElementById('panel-'+t);
     const b=document.getElementById('tab-'+t);
     if(p) p.classList.toggle('active',t===tab);
     if(b) b.classList.toggle('active',t===tab);
   });
-  // panel-eq is outside content div → use fixed overlay
+  // panel-eq は fixed overlay
   const eqPanel=document.getElementById('panel-eq');
-  const eqTab=document.getElementById('tab-eq');
   const isEq=tab==='eq';
   if(eqPanel) eqPanel.style.display=isEq?'block':'none';
-  if(eqTab)   eqTab.classList.toggle('active',isEq);
   if(isEq&&eqPanel){
     const hh=(document.querySelector('.header')?.offsetHeight||52)
             +(document.querySelector('.tabbar')?.offsetHeight||36);
     eqPanel.style.top=hh+'px';
   }
-  if(tab==='range'){renderPosBtns();renderMatrix();}
+  // panel-range はメインタブにないので、表示時は range として全画面表示
+  const rangePanel=document.getElementById('panel-range');
+  if(tab==='range'&&rangePanel){
+    rangePanel.classList.add('active');
+    renderPosBtns();renderMatrix();
+  }
   if(tab==='book'){renderBookTagBtns();renderBookList();}
   if(tab==='log'){renderVillainStacks();renderLogPosBtns();renderEvalHistory();refreshCardDisplays();}
   if(tab==='eq'){refreshEqDisplays();}
@@ -4797,7 +4836,33 @@ function renderAll(){
   renderAbHeroPosBtns();renderAbPlayerSelect();
   if(state.currentTab==='range')renderMatrix();
 }
-
+// ── Hamburger Menu ───────────────────────────
+function openHamburger(){
+  haptic('light');
+  document.getElementById('hamburger-overlay').style.opacity='1';
+  document.getElementById('hamburger-overlay').style.pointerEvents='all';
+  document.getElementById('hamburger-panel').style.transform='translateX(0)';
+}
+function closeHamburger(){
+  document.getElementById('hamburger-overlay').style.opacity='0';
+  document.getElementById('hamburger-overlay').style.pointerEvents='none';
+  document.getElementById('hamburger-panel').style.transform='translateX(100%)';
+}
+function openRangeFromMenu(){
+  closeHamburger();
+  setTimeout(()=>switchTab('range'),250);
+}
+function openEqFromMenu(){
+  closeHamburger();
+  setTimeout(()=>switchTab('eq'),250);
+}
+function resetOnboarding(){
+  if(confirm('使い方ガイドを最初から表示しますか?')){
+    localStorage.removeItem('ra_onboarded');
+    location.reload();
+  }
+}
+  
 renderAll();
 refreshCardDisplays(); 
 </script>
