@@ -510,6 +510,15 @@ button:active{transform:scale(0.94);opacity:0.85}
     </div>
     <!-- Hero pos btns hidden - now inside action builder -->
     <div id="log-pos-btns" style="display:none"></div>
+  
+    <!-- ── Players & Hero Position ── -->
+<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">プレイヤー設定</div>
+    <div style="font-size:10px;color:var(--text-muted)">タップで特性を設定</div>
+  </div>
+  <div id="log-seat-list" style="display:flex;flex-direction:column;gap:6px"></div>
+</div>
 
 <!-- Hero Hand Picker -->
 <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
@@ -2601,6 +2610,59 @@ function renderLogPosBtns(){
   // log-pos-btns は非表示。ab-hero-pos-btns 側で管理するため何もしない
   const hpEl=document.getElementById('log-hero-pos');
   if(hpEl) hpEl.textContent=heroPos();
+}
+
+function renderLogSeatList(){
+  const el=document.getElementById('log-seat-list');
+  if(!el) return;
+  const p=pos();
+  el.innerHTML=p.map((seat,i)=>{
+    const isHero=i===state.heroIdx;
+    const pro=profileOf(i);
+    const hasP=hasProfile(i);
+    const pname=state.seatProfiles[i]?.name||'';
+
+    // Hero行
+    if(isHero){
+      return `<div onclick="cycleHero()" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:8px;background:#1a1200;border:1.5px solid var(--gold);cursor:pointer">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;font-weight:700;color:var(--gold);min-width:48px">★ ${seat}</span>
+          <span style="font-size:10px;color:var(--gold);letter-spacing:1px">HERO</span>
+        </div>
+        <span style="font-size:10px;color:var(--text-muted)">タップで切替</span>
+      </div>`;
+    }
+
+    // 相手プレイヤー行
+    let summary='';
+    if(!hasP){
+      summary=`<span style="font-size:10px;color:var(--text-muted)">＋ 設定する</span>`;
+    } else {
+      const vc=VPIP_META[pro.vpip],ac=AGG_META[pro.agg],sc=SKILL_META[pro.skill];
+      const chips=[
+        pro.vpip!==1?`<span style="color:${vc.color}">${vc.emoji}</span>`:'',
+        pro.agg!==1?`<span style="color:${ac.color}">${ac.emoji}</span>`:'',
+        pro.skill!==1?`<span style="color:${sc.color}">${sc.emoji}</span>`:'',
+        ...pro.tends.map(t=>`<span style="color:${TEND_META[t].color}">${TEND_META[t].emoji}</span>`),
+      ].filter(Boolean).join(' ');
+      summary=`<span style="font-size:13px">${chips}</span>`;
+    }
+
+    const nameStr=pname?` <span style="font-size:10px;color:var(--gold);font-weight:600">${pname}</span>`:'';
+
+    return `<div onclick="openSheet(${i})" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:8px;background:var(--surface3);border:1px solid var(--border);cursor:pointer">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--text-dim);min-width:48px">${seat}</span>${nameStr}
+      </div>
+      ${summary}
+    </div>`;
+  }).join('');
+}
+
+// Hero行をタップ→次のポジションに切り替え(全席を一周)
+function cycleHero(){
+  const next=(state.heroIdx+1)%state.tableSize;
+  setHeroFromLog(next);
 }
 
 function setHeroFromLog(i){
@@ -4790,13 +4852,14 @@ function renderEvalHistory(){
     </div>`;
   }).join('');
 }
-
+  
 function renderAll(){
-  renderPosBtns();renderLogPosBtns();
+  renderPosBtns();renderLogPosBtns();renderLogSeatList();
   renderAbHeroPosBtns();renderAbPlayerSelect();
   if(state.currentTab==='range')renderMatrix();
 }
-  // ── Hamburger Menu ───────────────────────────
+
+// ── Hamburger Menu ───────────────────────────
 function openHamburger(){
   haptic('light');
   document.getElementById('hamburger-overlay').style.opacity='1';
