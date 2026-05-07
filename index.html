@@ -977,15 +977,9 @@ function migrateProfile(p){
 function profileOf(i){
   const raw=state.seatProfiles[i];
   if(!raw) return defaultProfile();
-  const p=migrateProfile(raw);
-  const obs=p.observation;
-  // 観察データが閾値未満なら手動値をそのまま返す
-  if(!obs||obs.hands<10) return p;
-  // 観察データから vpip/agg 軸を自動算出して上書き
-  const c=autoClassify(obs);
-  return{...p,vpip:c.vpipAxis,agg:c.aggAxis};
+  return migrateProfile(raw);
 }
-
+  
 // ── 観察データからタイプを自動判定 ──
 function autoClassify(obs){
   if(!obs||obs.hands===0){
@@ -1948,90 +1942,11 @@ function openSheet(i){
 
   const pro=profileOf(i);
   const raw=migrateProfile(state.seatProfiles[i]||defaultProfile());
-  const obs=raw.observation;
-  const classified=autoClassify(obs);
-  const hasEnoughSamples=obs.hands>=10;
-  const dimClass=hasEnoughSamples?'axis-dimmed':'';
-
-    // ── セクションA: 統計サマリー ──
-  const typeColor=
-    classified.confidence==='high'?'#4ade80':
-    classified.confidence==='mid'?'#FBBF24':
-    classified.confidence==='low'?'#F97316':
-    classified.confidence==='very_low'?'#5a7a5a':'#5a7a5a';
-  const typeBg=
-    classified.confidence==='high'?'#0d2a10':
-    classified.confidence==='mid'?'#1a1200':
-    classified.confidence==='low'?'#1a0f00':
-    classified.confidence==='very_low'?'#111f11':'#1a1a1a';
-
-  // タイプピルの表示: hands=0なら「未観察」、1-4なら「観察中 N/10」、5以上でタイプ表示
-  let pillHTML;
-  if(obs.hands===0){
-    pillHTML='<span style="font-size:10px;color:var(--text-muted)">未観察</span>';
-  } else if(obs.hands<5){
-    pillHTML=`<span class="obs-type-pill" style="background:${typeBg};color:${typeColor};border:1px solid ${typeColor}">観察中 ${obs.hands}/10</span>`;
-  } else {
-    pillHTML=`<span class="obs-type-pill" style="background:${typeBg};color:${typeColor};border:1px solid ${typeColor}">${classified.label}</span>`;
-  }
-  const summaryHTML=`
-    <div class="obs-summary">
-      <div class="obs-summary-row">
-        <span class="obs-summary-label">OBSERVATION</span>
-        ${pillHTML}
-      </div>
-      <div class="obs-stats">
-        <div class="obs-stat-cell"><div class="obs-stat-label">HANDS</div><div class="obs-stat-value">${obs.hands}</div></div>
-        <div class="obs-stat-cell"><div class="obs-stat-label">VPIP</div><div class="obs-stat-value">${classified.vpipPct??'—'}${classified.vpipPct!==null?'%':''}</div></div>
-        <div class="obs-stat-cell"><div class="obs-stat-label">PFR</div><div class="obs-stat-value">${classified.pfrPct??'—'}${classified.pfrPct!==null?'%':''}</div></div>
-        <div class="obs-stat-cell"><div class="obs-stat-label">3BET</div><div class="obs-stat-value">${classified.threeBetPct??'—'}${classified.threeBetPct!==null?'%':''}</div></div>
-      </div>
-      ${classified.note?`<div class="obs-confidence" style="color:${typeColor}">${classified.note}</div>`:''}
-    </div>`;
-
-
-    // ── セクションB: カウンターボタン ──
-  // 各ボタンのカウント表示は「そのアクションが選ばれた回数」を表す
-  //   コール = vpipCount - pfrCount (vpipだがraise/3betではない = pure call)
-  //   レイズ = pfrCount - threeBetCount (pfrだが3betではない = open raise)
-  //   3Bet  = threeBetCount
-  //   降り  = foldCount
-  const counterHTML=`
-    <div class="obs-counter-grid">
-      ${Object.entries(OBS_TYPES).map(([k,m])=>{
-        const count=
-          k==='call'?Math.max(0,obs.vpipCount-obs.pfrCount):
-          k==='raise'?Math.max(0,obs.pfrCount-obs.threeBetCount):
-          k==='threeBet'?obs.threeBetCount:
-          obs.foldCount;
-        return `<button class="obs-btn" onclick="addObservation(${i},'${k}')">
-          <span class="obs-btn-icon">${m.icon}</span>
-          <span>${m.label}</span>
-          <span class="obs-btn-count">${count}</span>
-        </button>`;
-      }).join('')}
-    </div>
-    ${lastObsAction&&lastObsAction.seatIdx===i?`
-      <div class="obs-undo-bar">
-        <span class="obs-undo-bar-label">+1 ${OBS_TYPES[lastObsAction.type].label}</span>
-        <button class="obs-undo-btn" onclick="undoObservation()">↶ Undo</button>
-      </div>
-    `:''}
-    ${obs.hands>0?`
-      <div style="text-align:right;margin:0 16px 10px">
-        <button onclick="resetObservation(${i})" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">観察リセット</button>
-      </div>
-    `:''}`;
-
-  // ── セクションC: 初期値3軸 + D: 特殊傾向 ──
-  const axisNotice=hasEnoughSamples
-    ?`<div class="axis-dimmed-notice">✓ 観察値が十分なため、VPIP/アグレは自動判定中</div>`
-    :`<div style="font-size:10px;color:var(--text-dim);margin-bottom:8px">初期印象をざっくり選択（観察10ハンドで自動上書き）</div>`;
-
+  
+// ── セクションC: 3軸 + D: 特殊傾向 ──
   const axesHTML=`
     <div style="width:100%">
-      ${axisNotice}
-      <div class="${dimClass}">
+      <div>
         <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">レンジ幅 (VPIP)</div>
         <div style="display:flex;gap:4px;margin-bottom:12px">${axisBtn(i,'vpip',VPIP_META,pro.vpip)}</div>
         <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px;margin-bottom:6px">⚡ アグレッション</div>
@@ -2123,10 +2038,10 @@ function openSheet(i){
       </div>
     </div>`;
 
-  // sheet-tagsにサマリー + カウンター + 軸UI + 定性タグ + メモをまとめて注入
+  // sheet-tagsに軸UI + 定性タグ + メモをまとめて注入
   document.getElementById('sheet-tags').innerHTML=
-    summaryHTML+counterHTML+axesHTML+streetTagsHTML+noteHTML;
-
+    axesHTML+streetTagsHTML+noteHTML;
+  
   document.getElementById('sheet-hint').textContent=
     i===l?'💡 左隣はスティール頻度・3betリスクに影響':
     i===r?'💡 右隣はオープンレンジの慎重度に影響':'💡 全席のプロフィールが距離に応じて補正に反映されます';
