@@ -110,6 +110,7 @@ self.addEventListener('fetch',e=>{
 </script>
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <style>
 :root{--gold:#c9a227;--gold-dim:#7a6010;--green-dark:#071507;--green-accent:#4ade80;--text:#d4e8d4;--text-dim:#5a7a5a;--text-muted:#334433;--raise:#16a34a;--mixed:#ca8a04;--bluff:#b45309;--red:#f87171;--blue:#60A5FA;--orange:#F97316;--surface:#0d1f0d;--surface2:#111f11;--surface3:#162616;--border:#1e3a1e;--border2:#2a4a2a;--safe-bottom:env(safe-area-inset-bottom,0px)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -616,6 +617,9 @@ button:active{transform:scale(0.94);opacity:0.85}
     <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">評価履歴</div>
     <button onclick="clearEvalHistory()" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">全削除</button>
   </div>
+  <button id="leak-cta-btn" onclick="openLeakAnalysis()" style="width:100%;padding:12px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#c9a227,#7a6010);color:#0a1a0a;border:none;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:8px">
+    <span>📊 これまでの評価からリーク分析</span>
+  </button>
   <div id="eval-history-list"></div>
 </div>
 
@@ -716,6 +720,18 @@ style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700
   </div>
 </div>
 
+</div>
+
+<!-- ── Leak Analysis Panel ── -->
+<div class="panel" id="panel-leak" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--green-dark);padding:12px 14px 20px;overflow-y:auto;z-index:10;display:none">
+  <div style="margin:0 0 12px">
+    <button onclick="switchTab('log')" style="padding:6px 12px;border-radius:6px;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--gold);border:1px solid var(--gold-dim);display:flex;align-items:center;gap:5px">
+      <span style="font-size:14px">←</span> ログに戻る
+    </button>
+  </div>
+  <div style="font-size:18px;font-weight:800;color:var(--gold);letter-spacing:2px;margin-bottom:4px">📊 リーク分析</div>
+  <div style="font-size:11px;color:var(--text-dim);margin-bottom:16px">評価履歴から繰り返している判断ミスを抽出</div>
+  <div id="leak-content"></div>
 </div>
 
 <!-- ── Equity Panel ── -->
@@ -824,6 +840,9 @@ style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700
   </button>
   <button onclick="openEqFromMenu()" style="width:100%;text-align:left;padding:13px 20px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
     <span>♠ エクイティ計算</span><span style="color:var(--text-dim);font-size:11px">›</span>
+  </button>
+  <button onclick="openLeakFromMenu()" style="width:100%;text-align:left;padding:13px 20px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer;display:flex;justify-content:space-between;align-items:center">
+    <span>📊 リーク分析</span><span style="color:var(--text-dim);font-size:11px">›</span>
   </button>
 
   <div style="padding:14px 20px 8px;font-size:9px;color:var(--text-dim);letter-spacing:1.5px">テーブル設定</div>
@@ -2898,6 +2917,15 @@ function switchTab(tab){
             +(document.querySelector('.tabbar')?.offsetHeight||36);
     eqPanel.style.top=hh+'px';
   }
+  // panel-leak も fixed overlay (panel-eq と同じ扱い)
+  const leakPanel=document.getElementById('panel-leak');
+  const isLeak=tab==='leak';
+  if(leakPanel) leakPanel.style.display=isLeak?'block':'none';
+  if(isLeak&&leakPanel){
+    const hh=(document.querySelector('.header')?.offsetHeight||52)
+            +(document.querySelector('.tabbar')?.offsetHeight||36);
+    leakPanel.style.top=hh+'px';
+  }
   // panel-range はメインタブにないので、表示時は range として全画面表示
   const rangePanel=document.getElementById('panel-range');
   if(tab==='range'&&rangePanel){
@@ -4735,6 +4763,7 @@ function clearEvalHistory(){
   renderEvalHistory();
 }
 function renderEvalHistory(){
+  refreshLeakCta();
   const el=document.getElementById('eval-history-list');
   if(!el) return;
   const h=loadEvalHistory();
@@ -4793,6 +4822,233 @@ function openEqFromMenu(){
   closeHamburger();
   setTimeout(()=>switchTab('eq'),250);
 }
+
+// ── Leak Analysis ────────────────────────────
+const LEAK_MIN_HISTORY=10;
+const LEAK_MAX_INPUT=30;
+const LEAK_RESULT_KEY='ringdom_leak_result';
+
+function loadLeakResult(){
+  try{return JSON.parse(localStorage.getItem(LEAK_RESULT_KEY)||'null');}
+  catch{return null;}
+}
+function saveLeakResult(result){
+  try{localStorage.setItem(LEAK_RESULT_KEY,JSON.stringify({...result,ts:Date.now()}));}
+  catch{}
+}
+function leakEscapeHtml(s){
+  return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function refreshLeakCta(){
+  const btn=document.getElementById('leak-cta-btn');
+  if(!btn) return;
+  const n=loadEvalHistory().length;
+  if(n<LEAK_MIN_HISTORY){
+    btn.style.background='var(--surface)';
+    btn.style.color='var(--text-dim)';
+    btn.style.cursor='not-allowed';
+    btn.style.border='1px dashed var(--border2)';
+    btn.disabled=true;
+    btn.innerHTML=`<span>📊 あと ${LEAK_MIN_HISTORY-n}件 評価するとリーク分析が使えます</span>`;
+  }else{
+    btn.style.background='linear-gradient(135deg,#c9a227,#7a6010)';
+    btn.style.color='#0a1a0a';
+    btn.style.cursor='pointer';
+    btn.style.border='none';
+    btn.disabled=false;
+    btn.innerHTML=`<span>📊 これまでの評価からリーク分析</span>`;
+  }
+}
+function openLeakAnalysis(){
+  switchTab('leak');
+  renderLeakPanel();
+}
+function openLeakFromMenu(){
+  closeHamburger();
+  setTimeout(()=>openLeakAnalysis(),250);
+}
+async function runLeakAnalysis(){
+  const history=loadEvalHistory();
+  if(history.length<LEAK_MIN_HISTORY) return;
+  // 履歴は新しい順で保存されているので reverse して 古い→新しい にして渡す
+  const input=history.slice(0,LEAK_MAX_INPUT).reverse();
+  const el=document.getElementById('leak-content');
+  if(!el) return;
+  el.innerHTML=`
+    <div style="text-align:center;padding:40px 0;color:var(--text-dim)">
+      <div class="eval-spinner" style="margin:0 auto 12px"></div>
+      AI分析中... (最大30秒)
+    </div>`;
+  try{
+    const res=await fetch('/api/leak-analyze',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({history:input}),
+    });
+    if(res.status===429){
+      renderLeakError('しばらく時間を空けて再度お試しください(レート制限)');
+      return;
+    }
+    const data=await res.json();
+    const text=data?.content?.[0]?.text||'';
+    let result=null;
+    try{result=JSON.parse(text);}
+    catch{
+      const m=text.match(/\{[\s\S]*\}/);
+      if(m){try{result=JSON.parse(m[0]);}catch{}}
+    }
+    if(!result||!Array.isArray(result.leaks)){
+      renderLeakFallback(text);
+      return;
+    }
+    saveLeakResult(result);
+    renderLeakResult(result);
+  }catch(e){
+    renderLeakError('分析に失敗しました');
+  }
+}
+function renderLeakPanel(){
+  const history=loadEvalHistory();
+  const cached=loadLeakResult();
+  const el=document.getElementById('leak-content');
+  if(!el) return;
+  if(history.length<LEAK_MIN_HISTORY){
+    el.innerHTML=`
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;text-align:center">
+        <div style="font-size:14px;color:var(--text);margin-bottom:8px">あと ${LEAK_MIN_HISTORY-history.length}件 で利用できます</div>
+        <div style="font-size:11px;color:var(--text-dim)">現在 ${history.length}/${LEAK_MIN_HISTORY}件</div>
+      </div>`;
+    return;
+  }
+  const lastTs=cached?.ts?new Date(cached.ts):null;
+  const lastStr=lastTs?`前回の分析: ${lastTs.getMonth()+1}/${lastTs.getDate()} ${String(lastTs.getHours()).padStart(2,'0')}:${String(lastTs.getMinutes()).padStart(2,'0')}`:'';
+  el.innerHTML=`
+    <button onclick="runLeakAnalysis()" style="width:100%;padding:14px;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;background:#c9a227;color:#0a1a0a;border:none;margin-bottom:8px">
+      ${cached?'🔄 再分析する':'📊 分析を開始'}
+    </button>
+    ${lastStr?`<div style="font-size:10px;color:var(--text-muted);text-align:center;margin-bottom:16px">${lastStr}</div>`:''}
+    ${cached?renderLeakResultHTML(cached):''}
+  `;
+}
+function renderLeakResult(result){
+  const el=document.getElementById('leak-content');
+  if(!el) return;
+  el.innerHTML=`
+    <button onclick="runLeakAnalysis()" style="width:100%;padding:14px;border-radius:10px;font-size:14px;font-weight:700;font-family:inherit;cursor:pointer;background:#c9a227;color:#0a1a0a;border:none;margin-bottom:16px">
+      🔄 再分析する
+    </button>
+    ${renderLeakResultHTML(result)}
+  `;
+}
+function renderLeakResultHTML(result){
+  const sevColor={high:'#f87171',medium:'#FBBF24',low:'#4ade80'};
+  const sevLabel={high:'重要',medium:'中',low:'軽微'};
+  const leaks=Array.isArray(result.leaks)?result.leaks:[];
+  return `
+    <div style="background:var(--surface);border:1px solid var(--gold-dim);border-radius:12px;padding:16px;margin-bottom:16px">
+      <div style="font-size:10px;color:var(--gold);letter-spacing:2px;margin-bottom:8px">SUMMARY</div>
+      <div style="font-size:13px;color:var(--text);line-height:1.7">${leakEscapeHtml(result.summary)}</div>
+    </div>
+    ${leaks.map((leak,i)=>{
+      const c=sevColor[leak.severity]||'#94A3B8';
+      const l=sevLabel[leak.severity]||'-';
+      return `
+      <div style="background:var(--surface);border:1px solid var(--border);border-left:3px solid ${c};border-radius:8px;padding:14px;margin-bottom:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-size:14px;font-weight:800;color:var(--text)">${i+1}. ${leakEscapeHtml(leak.title)}</div>
+          <div style="font-size:9px;font-weight:700;color:${c};padding:2px 8px;border:1px solid ${c};border-radius:10px">${l}</div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-bottom:8px">${leakEscapeHtml(leak.frequency)}</div>
+        <div style="font-size:12px;color:var(--text-dim);line-height:1.7;margin-bottom:10px">${leakEscapeHtml(leak.pattern)}</div>
+        <div style="background:#0d1a0d;border-radius:6px;padding:10px">
+          <div style="font-size:10px;color:var(--green-accent);font-weight:700;margin-bottom:4px">→ 改善案</div>
+          <div style="font-size:12px;color:var(--text);line-height:1.7">${leakEscapeHtml(leak.fix)}</div>
+        </div>
+      </div>`;
+    }).join('')}
+    ${result.strength?`
+      <div style="background:#0d1a2a;border:1px solid #1e3a5f;border-radius:8px;padding:14px;margin-bottom:16px">
+        <div style="font-size:10px;color:#60A5FA;font-weight:700;margin-bottom:4px">✓ 良い点</div>
+        <div style="font-size:12px;color:var(--text);line-height:1.7">${leakEscapeHtml(result.strength)}</div>
+      </div>`:''}
+    <button onclick="exportLeakCard()" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--gold);border:1px solid var(--gold);margin-bottom:8px">
+      📷 シェア用カードを保存
+    </button>
+  `;
+}
+function renderLeakError(msg){
+  const el=document.getElementById('leak-content');
+  if(!el) return;
+  el.innerHTML=`
+    <div style="background:#2a0d0d;border:1px solid #5c1a1a;border-radius:8px;padding:14px;color:#f87171;font-size:12px;margin-bottom:12px">${leakEscapeHtml(msg)}</div>
+    <button onclick="renderLeakPanel()" style="width:100%;padding:12px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--gold);border:1px solid var(--gold-dim)">戻る</button>`;
+}
+function renderLeakFallback(rawText){
+  const el=document.getElementById('leak-content');
+  if(!el) return;
+  el.innerHTML=`
+    <div style="background:#2a1f0d;border:1px solid #5c4a1a;border-radius:8px;padding:14px;color:#FBBF24;font-size:11px;margin-bottom:12px">
+      ⚠ 構造化失敗のため生テキスト表示
+    </div>
+    <div style="background:var(--surface);padding:14px;border-radius:8px;font-size:12px;color:var(--text);line-height:1.7;white-space:pre-wrap;margin-bottom:12px">${leakEscapeHtml(rawText)}</div>
+    <button onclick="renderLeakPanel()" style="width:100%;padding:12px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--gold);border:1px solid var(--gold-dim)">戻る</button>`;
+}
+async function exportLeakCard(){
+  const result=loadLeakResult();
+  if(!result) return;
+  if(typeof html2canvas==='undefined'){
+    alert('画像生成ライブラリの読み込み中です。少し待ってから再度お試しください');
+    return;
+  }
+  const top3=(result.leaks||[]).slice(0,3);
+  const sevColor={high:'#f87171',medium:'#FBBF24',low:'#4ade80'};
+  const card=document.createElement('div');
+  card.style.cssText=`
+    position:fixed;left:-9999px;top:0;
+    width:1080px;height:1920px;
+    background:linear-gradient(180deg,#060e06 0%,#0d2210 100%);
+    color:#d4e8d4;font-family:'Inter',sans-serif;
+    padding:80px 60px;box-sizing:border-box;
+    display:flex;flex-direction:column;
+  `;
+  card.innerHTML=`
+    <div style="text-align:center;margin-bottom:60px">
+      <div style="font-size:52px;font-weight:900;color:#c9a227;letter-spacing:8px">♠ RINGDOM</div>
+      <div style="font-size:24px;color:#7a9a7a;letter-spacing:4px;margin-top:12px">MY LEAKS — TOP 3</div>
+    </div>
+    ${top3.map((leak,i)=>{
+      const c=sevColor[leak.severity]||'#94A3B8';
+      return `
+      <div style="background:rgba(13,31,13,0.8);border:2px solid ${c};border-radius:24px;padding:40px;margin-bottom:32px;flex:1">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+          <div style="font-size:56px;font-weight:900;color:#c9a227;line-height:1">#${i+1}</div>
+          <div style="font-size:36px;font-weight:800;color:#fff;flex:1">${leakEscapeHtml(leak.title)}</div>
+        </div>
+        <div style="font-size:22px;color:#a0c0a0;line-height:1.7;margin-bottom:20px">${leakEscapeHtml(leak.pattern)}</div>
+        <div style="background:#0d1a0d;border-radius:12px;padding:20px">
+          <div style="font-size:18px;color:#4ade80;font-weight:700;margin-bottom:8px">→ 改善案</div>
+          <div style="font-size:22px;color:#d4e8d4;line-height:1.7">${leakEscapeHtml(leak.fix)}</div>
+        </div>
+      </div>`;
+    }).join('')}
+    <div style="text-align:center;margin-top:40px;font-size:20px;color:#7a6010;letter-spacing:3px">
+      ringdom.vercel.app
+    </div>
+  `;
+  document.body.appendChild(card);
+  try{
+    const canvas=await html2canvas(card,{backgroundColor:null,scale:1});
+    const a=document.createElement('a');
+    a.download=`ringdom_leaks_${Date.now()}.png`;
+    a.href=canvas.toDataURL('image/png');
+    a.click();
+  }catch(e){
+    alert('画像の生成に失敗しました');
+  }finally{
+    document.body.removeChild(card);
+  }
+}
+
 function resetOnboarding(){
   if(confirm('使い方ガイドを最初から表示しますか?')){
     localStorage.removeItem('ra_onboarded');
