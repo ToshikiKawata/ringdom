@@ -4,10 +4,12 @@ const ALLOWED_ORIGINS = [
   'https://ringdom.vercel.app',
   'http://localhost:3000', // 開発用（不要なら削除）
 ];
+// Vercel プレビューデプロイURL (例: https://ringdom-git-xxx-toshikikawatas-projects.vercel.app)
+const PREVIEW_ORIGIN_REGEX = /^https:\/\/ringdom-[a-z0-9-]+\.vercel\.app$/;
 
 export default async function handler(req) {
   const origin = req.headers.get('origin') || '';
-  const isAllowed = ALLOWED_ORIGINS.includes(origin);
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || PREVIEW_ORIGIN_REGEX.test(origin);
 
   // CORS preflight
   if (req.method === 'OPTIONS') {
