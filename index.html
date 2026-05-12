@@ -4889,8 +4889,26 @@ async function runLeakAnalysis(){
       renderLeakError('しばらく時間を空けて再度お試しください(レート制限)');
       return;
     }
-    const data=await res.json();
+    const raw=await res.text();
+    if(!res.ok){
+      renderLeakError(`分析に失敗しました (HTTP ${res.status}): ${raw.slice(0,300)}`);
+      return;
+    }
+    let data=null;
+    try{data=JSON.parse(raw);}
+    catch{
+      renderLeakError(`分析に失敗しました (応答がJSONではない): ${raw.slice(0,300)}`);
+      return;
+    }
+    if(data?.error){
+      renderLeakError(`分析に失敗しました (APIエラー): ${data.error?.message||data.error}`);
+      return;
+    }
     const text=data?.content?.[0]?.text||'';
+    if(!text){
+      renderLeakError(`分析に失敗しました (応答が空): ${JSON.stringify(data).slice(0,300)}`);
+      return;
+    }
     let result=null;
     try{result=JSON.parse(text);}
     catch{
@@ -4904,7 +4922,7 @@ async function runLeakAnalysis(){
     saveLeakResult(result);
     renderLeakResult(result);
   }catch(e){
-    renderLeakError('分析に失敗しました');
+    renderLeakError(`分析に失敗しました (例外): ${e?.message||String(e)}`);
   }
 }
 function renderLeakPanel(){
