@@ -510,7 +510,13 @@ button:active{transform:scale(0.94);opacity:0.85}
     </div>
     <!-- Hero pos btns hidden - now inside action builder -->
     <div id="log-pos-btns" style="display:none"></div>
-  
+
+    <!-- ── Hero Position (top, prominent) ── -->
+    <div style="background:var(--surface);border:1px solid var(--gold-dim);border-radius:10px;padding:14px;margin-bottom:10px">
+      <div style="font-size:10px;color:var(--gold);letter-spacing:2px;font-weight:700;margin-bottom:10px">★ Heroはどのポジション?</div>
+      <div id="top-hero-pos-btns" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+    </div>
+
     <!-- ── Players & Hero Position ── -->
 <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
@@ -551,11 +557,6 @@ button:active{transform:scale(0.94);opacity:0.85}
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
     <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">アクション経緯</div>
     <button onclick="clearActions()" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">クリア</button>
-  </div>
-  <!-- Hero position selector inside action builder -->
-  <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;padding:8px;background:var(--surface3);border-radius:8px;border:1px solid var(--border)">
-    <div style="font-size:10px;color:var(--gold);font-weight:700;flex-shrink:0">Hero</div>
-    <div id="ab-hero-pos-btns" style="display:flex;gap:4px;overflow-x:auto;flex:1;-webkit-overflow-scrolling:touch"></div>
   </div>
   <!-- Log display -->
   <div id="action-log" style="margin-bottom:10px;min-height:24px"></div>
@@ -2540,7 +2541,7 @@ function closeHandModal(){
 }
 
 function renderLogPosBtns(){
-  // log-pos-btns は非表示。ab-hero-pos-btns 側で管理するため何もしない
+  // log-pos-btns は非表示。top-hero-pos-btns 側で管理するため何もしない
   const hpEl=document.getElementById('log-hero-pos');
   if(hpEl) hpEl.textContent=heroPos();
 }
@@ -3294,15 +3295,17 @@ function updateStreetBtns(){
 }
 
 function renderAbHeroPosBtns(){
-  const el=document.getElementById('ab-hero-pos-btns');
+  const el=document.getElementById('top-hero-pos-btns');
   if(!el) return;
   const p=pos();
   el.innerHTML=p.map((seat,i)=>{
     const isHero=i===state.heroIdx;
     return`<button onclick="setHeroFromLog(${i})"
-      style="padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;flex-shrink:0;
-      background:${isHero?'var(--gold)':'transparent'};color:${isHero?'#0a1a0a':'var(--text-dim)'};
-      border:1px solid ${isHero?'var(--gold)':'var(--border2)'}">${seat}</button>`;
+      style="flex:1;min-width:48px;padding:10px 6px;border-radius:8px;font-size:13px;font-weight:800;font-family:inherit;cursor:pointer;
+      background:${isHero?'var(--gold)':'transparent'};color:${isHero?'#0a1a0a':'var(--text)'};
+      border:1.5px solid ${isHero?'var(--gold)':'var(--border2)'};
+      box-shadow:${isHero?'0 0 8px rgba(201,162,39,0.4)':'none'};
+      transition:all 0.15s">${seat}</button>`;
   }).join('');
 }
 
