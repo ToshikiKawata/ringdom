@@ -3709,9 +3709,9 @@ function updateEvalBtn(){
   btn.style.color=ready?'#0a1a0a':'#4a6a4a';
   btn.style.cursor=ready?'pointer':'default';
 
-  // 残り回数の表示(Free版のみ)
+  // 残り回数の表示(Free版のみ。β中は非表示)
   let remainingLabel='';
-  if(!isPro()){
+  if(!isPro()&&!BETA_UNLIMITED){
     const remaining=getRemainingEvals();
     if(remaining===0){
       remainingLabel=' (今月の上限到達)';
@@ -4693,6 +4693,8 @@ function setPro(v){
 
 // ── AI評価の月次使用回数管理 ──
 const FREE_EVAL_LIMIT=10; // Freeユーザーの月次上限
+// β期間中は月次上限を無効化(フィードバック収集を優先)。リリース時に false に戻す
+const BETA_UNLIMITED=true;
 
 function getCurrentYearMonth(){
   const d=new Date();
@@ -4728,7 +4730,7 @@ function getRemainingEvals(){
 }
 
 function canEvaluate(){
-  return isPro()||getRemainingEvals()>0;
+  return BETA_UNLIMITED||isPro()||getRemainingEvals()>0;
 }
   
 function loadEvalHistory(){
