@@ -7,6 +7,8 @@ const ALLOWED_ORIGINS = [
   'https://ringdom.vercel.app',
   'http://localhost:3000',
 ];
+// Vercel プレビューデプロイURL (例: https://ringdom-git-xxx-toshikikawatas-projects.vercel.app)
+const PREVIEW_ORIGIN_REGEX = /^https:\/\/ringdom-[a-z0-9-]+\.vercel\.app$/;
 
 // β期間中の簡易レート制限: 1 IP につき 1時間 5回まで。
 // UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN が未設定の環境
@@ -72,7 +74,7 @@ function buildUserPrompt(history) {
 
 export default async function handler(req) {
   const origin = req.headers.get('origin') || '';
-  const isAllowed = ALLOWED_ORIGINS.includes(origin);
+  const isAllowed = ALLOWED_ORIGINS.includes(origin) || PREVIEW_ORIGIN_REGEX.test(origin);
 
   // CORS preflight
   if (req.method === 'OPTIONS') {
