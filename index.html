@@ -556,7 +556,10 @@ button:active{transform:scale(0.94);opacity:0.85}
 <div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
     <div style="font-size:9px;color:var(--text-dim);letter-spacing:1.5px">アクション経緯</div>
-    <button onclick="clearActions()" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">クリア</button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div id="pot-display" style="font-size:12px;font-weight:800;color:var(--gold);letter-spacing:1px">ポット: 1.5 BB</div>
+      <button onclick="clearActions()" style="font-size:10px;padding:3px 10px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">クリア</button>
+    </div>
   </div>
   <!-- Log display -->
   <div id="action-log" style="margin-bottom:10px;min-height:24px"></div>
@@ -3466,7 +3469,53 @@ function addAction(){
   updateEvalBtn();
 }
 
+// ── ポット計算 ──────────────────────────────
+// actionLog を辿り、現時点のポット額を BB 単位で返す。
+// 初期値はブラインド: SB 0.5 + BB 1.0 = 1.5 BB。
+// 各アクションの size は「そのアクションでのプレイヤーの合計コミット額」(raise to X 形式) 前提。
+function calculatePot(){
+  let pot=1.5;
+  let currentBet=1.0;
+  let committed={SB:0.5,BB:1.0};
+  for(const e of actionLog){
+    if(e.type==='street'){
+      if(e.street!=='preflop'){
+        currentBet=0;
+        committed={};
+      }
+      continue;
+    }
+    if(e.type!=='action') continue;
+    const player=e.player;
+    const action=e.action;
+    const sizeNum=parseFloat(e.size)||0;
+    const prevCommit=committed[player]||0;
+    if(action==='fold'||action==='check'){
+      // no pot change
+    }else if(action==='call'){
+      const delta=Math.max(0,currentBet-prevCommit);
+      pot+=delta;
+      committed[player]=currentBet;
+    }else if(action==='bet'||action==='raise'||action==='3bet'||action==='allin'){
+      const delta=Math.max(0,sizeNum-prevCommit);
+      pot+=delta;
+      if(sizeNum>0) committed[player]=sizeNum;
+      if(sizeNum>currentBet) currentBet=sizeNum;
+    }
+  }
+  return pot;
+}
+function renderPotDisplay(){
+  const el=document.getElementById('pot-display');
+  if(!el) return;
+  const pot=calculatePot();
+  // 小数点1桁、ただし整数なら整数表示
+  const potStr=Number.isInteger(pot)?pot.toString():pot.toFixed(1);
+  el.textContent=`ポット: ${potStr} BB`;
+}
+
 function renderActionLog(){
+  renderPotDisplay();
   const container=document.getElementById('action-log');
   if(!container)return;
   if(actionLog.length===0){container.innerHTML='';return;}
