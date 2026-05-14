@@ -598,9 +598,14 @@ button:active{transform:scale(0.94);opacity:0.85}
   <button id="add-action-btn" onclick="addAction()" style="width:100%;padding:11px;border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#16a34a;color:#fff;border:none">追加する</button>
 </div>
 
-<button onclick="evaluatePlay()" id="eval-btn" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#2a3a2a;color:#5a7a5a;border:none;margin-bottom:14px">
-  AIに評価してもらう（ハンドとアクションを入力してください）
-</button>
+<div style="display:flex;gap:6px;margin-bottom:14px">
+  <button onclick="evaluatePlay()" id="eval-btn" style="flex:1;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#2a3a2a;color:#5a7a5a;border:none">
+    AIに評価してもらう（ハンドとアクションを入力してください）
+  </button>
+  <button onclick="saveAsHistoryOnly()" id="save-history-btn" style="flex-shrink:0;padding:13px 14px;border-radius:10px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-dim);border:1px solid var(--border2)" title="AI評価なしで履歴に保存（共有・話のタネ用）">
+    📝 保存のみ
+  </button>
+</div>
 <div id="eval-result" style="display:none;background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:14px;margin-bottom:10px">
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
     <div style="font-size:9px;color:var(--gold);letter-spacing:1.5px">AI評価</div>
@@ -3983,6 +3988,43 @@ function onProUpgradeClick(){
     }
   },300);
 }
+// AI評価を呼ばずに、ハンドだけを履歴として保存する。
+// 共有・知人との話のタネ・後で見返す用途。
+function saveAsHistoryOnly(){
+  const hand=getHandString();
+  const board=getBoardString();
+  const action=buildActionString();
+  const street=currentStreet;
+
+  if(heroCards.filter(Boolean).length<2){alert('ハンドを2枚選択してください');return;}
+  const preflopActions=actionLog.filter(e=>e.type==='action'&&!e.auto);
+  const hasStreet=actionLog.some(e=>e.type==='street');
+  if(!hasStreet||preflopActions.length===0){
+    alert('プリフロップのアクションを少なくとも1つ入力してください');return;
+  }
+
+  addEvalHistory({
+    ts:Date.now(),
+    type:'history',
+    hand:hand,
+    board:board,
+    street,
+    action:action,
+    rating:'',
+    oneline:'',
+    comment:''
+  });
+  haptic('light');
+  const btn=document.getElementById('save-history-btn');
+  if(btn){
+    const orig=btn.innerHTML;
+    btn.innerHTML='✓ 保存しました';
+    btn.style.color='#4ade80';
+    btn.style.borderColor='#4ade80';
+    setTimeout(()=>{btn.innerHTML=orig;btn.style.color='';btn.style.borderColor='';},1500);
+  }
+}
+
 async function evaluatePlay(){
   const hand=getHandString();
   const board=getBoardString();
@@ -4851,6 +4893,75 @@ function addEvalHistory(entry){
   }
   renderEvalHistory();
 }
+// 履歴1件を 1080x1080 の正方形 PNG にエクスポート (LINE/X 共有用)
+async function shareHistoryAsImage(idx){
+  const h=loadEvalHistory();
+  const e=h[idx];
+  if(!e) return;
+  if(typeof html2canvas==='undefined'){
+    alert('画像生成ライブラリの読み込み中です。少し待ってから再度お試しください');
+    return;
+  }
+  const isHistoryOnly=e.type==='history'||!e.rating;
+  const starCount=(e.rating||'').match(/★/g)?.length||0;
+  const starColor=starCount>=4?'#4ade80':starCount===3?'#FBBF24':'#f87171';
+  const date=new Date(e.ts);
+  const dateStr=`${date.getFullYear()}.${String(date.getMonth()+1).padStart(2,'0')}.${String(date.getDate()).padStart(2,'0')}`;
+  const card=document.createElement('div');
+  card.style.cssText=`
+    position:fixed;left:-9999px;top:0;
+    width:1080px;height:1080px;
+    background:linear-gradient(135deg,#060e06 0%,#0a1a0a 50%,#112811 100%);
+    color:#d4e8d4;font-family:'Inter','Noto Sans JP',sans-serif;
+    padding:60px;box-sizing:border-box;
+    display:flex;flex-direction:column;
+  `;
+  card.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px">
+      <div style="font-size:36px;font-weight:900;color:#c9a227;letter-spacing:6px">♠ RINGDOM</div>
+      <div style="font-size:18px;color:#7a9a7a;letter-spacing:2px">${dateStr}</div>
+    </div>
+    ${isHistoryOnly
+      ? `<div style="display:inline-block;font-size:18px;font-weight:700;color:#7a9a7a;border:1.5px solid #4a6a4a;border-radius:24px;padding:6px 20px;margin-bottom:28px;align-self:flex-start;letter-spacing:2px">📝 ハンド履歴</div>`
+      : `<div style="display:flex;align-items:center;gap:16px;margin-bottom:28px">
+          <div style="font-size:42px">${e.rating}</div>
+          <div style="font-size:24px;font-weight:800;color:${starColor}">${leakEscapeHtml(e.oneline||'')}</div>
+        </div>`
+    }
+    <div style="background:rgba(13,31,13,0.7);border:2px solid #c9a227;border-radius:20px;padding:36px;margin-bottom:24px">
+      <div style="font-size:18px;color:#7a9a7a;letter-spacing:3px;margin-bottom:12px">HAND / BOARD</div>
+      <div style="font-size:54px;font-weight:900;color:#c9a227;letter-spacing:4px;margin-bottom:16px">
+        ${leakEscapeHtml(e.hand||'')}${e.board?' <span style="color:#7a9a7a;font-size:36px"> / </span>'+leakEscapeHtml(e.board):''}
+      </div>
+      <div style="font-size:22px;color:#a0c0a0;letter-spacing:2px">— ${leakEscapeHtml(e.street||'')}</div>
+    </div>
+    <div style="background:rgba(13,31,13,0.5);border:1px solid #2a4a2a;border-radius:16px;padding:28px;margin-bottom:24px;flex:1;overflow:hidden">
+      <div style="font-size:16px;color:#7a9a7a;letter-spacing:3px;margin-bottom:14px">ACTION</div>
+      <div style="font-size:22px;color:#d4e8d4;line-height:1.7;white-space:pre-wrap;font-family:'Inter','Courier New',monospace">${leakEscapeHtml(e.action||'')}</div>
+    </div>
+    ${e.comment
+      ? `<div style="background:rgba(13,31,13,0.5);border-left:4px solid #c9a227;border-radius:8px;padding:24px;margin-bottom:24px">
+          <div style="font-size:14px;color:#c9a227;letter-spacing:2px;margin-bottom:10px;font-weight:700">AI EVAL</div>
+          <div style="font-size:20px;color:#d4e8d4;line-height:1.7">${leakEscapeHtml(e.comment||'')}</div>
+        </div>`
+      : ''
+    }
+    <div style="text-align:center;font-size:18px;color:#7a6010;letter-spacing:3px;margin-top:auto">ringdom.vercel.app</div>
+  `;
+  document.body.appendChild(card);
+  try{
+    const canvas=await html2canvas(card,{backgroundColor:null,scale:1});
+    const a=document.createElement('a');
+    a.download=`ringdom_hand_${e.ts}.png`;
+    a.href=canvas.toDataURL('image/png');
+    a.click();
+  }catch(err){
+    alert('画像の生成に失敗しました');
+  }finally{
+    document.body.removeChild(card);
+  }
+}
+
 function deleteEvalHistory(idx){
   const h=loadEvalHistory();
   h.splice(idx,1);
@@ -4871,18 +4982,22 @@ function renderEvalHistory(){
     return;
   }
   el.innerHTML=h.map((e,i)=>{
-    const starCount=(e.rating.match(/★/g)||[]).length;
+    const isHistoryOnly=e.type==='history'||!e.rating;
+    const starCount=(e.rating||'').match(/★/g)?.length||0;
     const starColor=starCount>=4?'#4ade80':starCount===3?'#FBBF24':'#f87171';
     const date=new Date(e.ts);
     const dateStr=`${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2,'0')}`;
+    const headerLeft=isHistoryOnly
+      ? `<span style="font-size:10px;font-weight:700;color:var(--text-dim);background:var(--surface3);border:1px solid var(--border2);border-radius:4px;padding:2px 8px;letter-spacing:1px">📝 履歴</span>`
+      : `<span style="font-size:15px">${e.rating}</span><span style="font-size:11px;font-weight:700;color:${starColor}">${e.oneline}</span>`;
     return`<div style="background:var(--surface);border:1px solid var(--border2);border-radius:8px;padding:10px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
         <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-size:15px">${e.rating}</span>
-          <span style="font-size:11px;font-weight:700;color:${starColor}">${e.oneline}</span>
+          ${headerLeft}
         </div>
         <div style="display:flex;align-items:center;gap:6px">
           <span style="font-size:9px;color:var(--text-muted)">${dateStr}</span>
+          <button onclick="shareHistoryAsImage(${i})" style="font-size:10px;padding:2px 6px;border-radius:4px;background:transparent;color:var(--gold);border:1px solid var(--gold-dim);cursor:pointer;font-family:inherit" title="画像で共有">📷</button>
           <button onclick="deleteEvalHistory(${i})" style="font-size:10px;padding:2px 6px;border-radius:4px;background:transparent;color:#f87171;border:1px solid #5c1a1a;cursor:pointer;font-family:inherit">✕</button>
         </div>
       </div>
@@ -4890,7 +5005,7 @@ function renderEvalHistory(){
         ${e.hand}${e.board?' / '+e.board:''} — ${e.street}
       </div>
       <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;line-height:1.6;white-space:pre-wrap">${e.action}</div>
-      <div style="font-size:11px;color:var(--text);line-height:1.7;padding-top:6px;border-top:1px solid var(--border)">${e.comment}</div>
+      ${e.comment?`<div style="font-size:11px;color:var(--text);line-height:1.7;padding-top:6px;border-top:1px solid var(--border)">${e.comment}</div>`:''}
     </div>`;
   }).join('');
 }
@@ -4939,17 +5054,21 @@ function saveLeakResult(result){
 function leakEscapeHtml(s){
   return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
+// リーク分析は AI 評価エントリのみを対象とする (履歴のみエントリは除外)
+function getEvalOnlyHistory(){
+  return loadEvalHistory().filter(e=>e.type!=='history'&&e.rating&&e.rating!=='—');
+}
 function refreshLeakCta(){
   const btn=document.getElementById('leak-cta-btn');
   if(!btn) return;
-  const n=loadEvalHistory().length;
+  const n=getEvalOnlyHistory().length;
   if(n<LEAK_MIN_HISTORY){
     btn.style.background='var(--surface)';
     btn.style.color='var(--text-dim)';
     btn.style.cursor='not-allowed';
     btn.style.border='1px dashed var(--border2)';
     btn.disabled=true;
-    btn.innerHTML=`<span>📊 あと ${LEAK_MIN_HISTORY-n}件 評価するとリーク分析が使えます</span>`;
+    btn.innerHTML=`<span>📊 あと ${LEAK_MIN_HISTORY-n}件 AI評価するとリーク分析が使えます</span>`;
   }else{
     btn.style.background='linear-gradient(135deg,#c9a227,#7a6010)';
     btn.style.color='#0a1a0a';
@@ -4968,7 +5087,8 @@ function openLeakFromMenu(){
   setTimeout(()=>openLeakAnalysis(),250);
 }
 async function runLeakAnalysis(){
-  const history=loadEvalHistory();
+  // AI 評価エントリのみを対象とする (履歴のみエントリは星もコメントもないため除外)
+  const history=getEvalOnlyHistory();
   if(history.length<LEAK_MIN_HISTORY) return;
   // 履歴は新しい順で保存されているので reverse して 古い→新しい にして渡す
   const input=history.slice(0,LEAK_MAX_INPUT).reverse();
@@ -5026,15 +5146,16 @@ async function runLeakAnalysis(){
   }
 }
 function renderLeakPanel(){
-  const history=loadEvalHistory();
+  // AI 評価エントリのみカウント (履歴のみエントリは除外)
+  const history=getEvalOnlyHistory();
   const cached=loadLeakResult();
   const el=document.getElementById('leak-content');
   if(!el) return;
   if(history.length<LEAK_MIN_HISTORY){
     el.innerHTML=`
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;text-align:center">
-        <div style="font-size:14px;color:var(--text);margin-bottom:8px">あと ${LEAK_MIN_HISTORY-history.length}件 で利用できます</div>
-        <div style="font-size:11px;color:var(--text-dim)">現在 ${history.length}/${LEAK_MIN_HISTORY}件</div>
+        <div style="font-size:14px;color:var(--text);margin-bottom:8px">あと ${LEAK_MIN_HISTORY-history.length}件 AI 評価で利用できます</div>
+        <div style="font-size:11px;color:var(--text-dim)">現在 ${history.length}/${LEAK_MIN_HISTORY}件 (AI評価ありのみ)</div>
       </div>`;
     return;
   }
