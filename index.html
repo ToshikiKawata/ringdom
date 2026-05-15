@@ -598,6 +598,18 @@ button:active{transform:scale(0.94);opacity:0.85}
   <button id="add-action-btn" onclick="addAction()" style="width:100%;padding:11px;border-radius:7px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#16a34a;color:#fff;border:none">追加する</button>
 </div>
 
+<!-- ── Opponent Hands (D1) ── -->
+<div style="background:var(--surface);border:1px solid var(--border2);border-radius:10px;padding:12px;margin-bottom:10px">
+  <button onclick="toggleOpponentHands()" id="opp-hands-toggle" style="width:100%;display:flex;justify-content:space-between;align-items:center;background:transparent;border:none;color:var(--text);font-size:11px;font-family:inherit;cursor:pointer;padding:0">
+    <span><span style="color:var(--gold);font-weight:700">✋ 相手のハンド</span> <span style="color:var(--text-dim)">(任意・ショーダウン記録用)</span></span>
+    <span id="opp-hands-arrow" style="color:var(--text-dim);font-size:10px">▼</span>
+  </button>
+  <div id="opp-hands-body" style="display:none;margin-top:10px">
+    <div id="opp-hands-list" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+    <div style="font-size:10px;color:var(--text-muted);margin-top:8px;line-height:1.6">記録した相手ハンドは履歴と共有画像に含まれます。後で「あいつこのハンドで打ってきた」と見返せます。</div>
+  </div>
+</div>
+
 <div style="display:flex;gap:6px;margin-bottom:14px">
   <button onclick="evaluatePlay()" id="eval-btn" style="flex:1;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#2a3a2a;color:#5a7a5a;border:none">
     AIに評価してもらう（ハンドとアクションを入力してください）
@@ -3412,6 +3424,9 @@ function clearActions(){
   currentStreet='preflop';
   // Preflopを自動追加
   actionLog.push({type:'street',street:'preflop',label:STREET_LABELS['preflop']});
+  // 相手ハンドもリセット (ハンドが変わるので)
+  opponentHands={};
+  renderOpponentHands();
   updateStreetBtns();
   renderAbPlayerSelect();
   renderActionLog();
@@ -3584,10 +3599,11 @@ const SUITS=[
 ];
 const CARD_RANKS=['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
 
-let pickerMode=null; // 'hand' | 'board'
+let pickerMode=null; // 'hand' | 'board' | 'opp-<POS>' (例: 'opp-UTG')
 let heroCards=[null,null];    // ['As','Kh'] etc
 let boardCards=[null,null,null,null,null];
 let pickerSelected=[];        // cards currently being edited
+let opponentHands={};         // { 'UTG': ['Ah','Kh'], 'BB': ['Qs','Qc'] }
 
 function cardDisplay(card){
   if(!card) return null;
@@ -3632,11 +3648,16 @@ function openCardPicker(mode){
   }else if(mode==='board'){
     pickerSelected=[];
     for(const c of boardCards){if(!c) break;pickerSelected.push(c);}
+  }else if(mode&&mode.startsWith('opp-')){
+    const pos=mode.slice(4);
+    pickerSelected=[...(opponentHands[pos]||[])].filter(Boolean);
   }else{
     pickerSelected=[...boardCards].filter(Boolean);
   }
-  document.getElementById('picker-title').textContent=
-    mode==='hand'?'ハンドを選択（2枚）':'ボードを選択（最大5枚）';
+  let title='ボードを選択（最大5枚）';
+  if(mode==='hand') title='ハンドを選択（2枚）';
+  else if(mode&&mode.startsWith('opp-')) title=`相手 (${mode.slice(4)}) のハンド（2枚）`;
+  document.getElementById('picker-title').textContent=title;
   renderPickerGrid();
   const ov=document.getElementById('card-picker-overlay');
   ov.style.opacity='1';ov.style.pointerEvents='all';
@@ -3647,6 +3668,12 @@ function closeCardPicker(){
   // Commit selection
   if(pickerMode==='hand'){
     heroCards=[pickerSelected[0]||null,pickerSelected[1]||null];
+  }else if(pickerMode&&pickerMode.startsWith('opp-')){
+    const pos=pickerMode.slice(4);
+    const cards=pickerSelected.filter(Boolean);
+    if(cards.length===0) delete opponentHands[pos];
+    else opponentHands[pos]=cards;
+    renderOpponentHands();
   } else {
     boardCards=[0,1,2,3,4].map(i=>pickerSelected[i]||null);
   }
@@ -3662,14 +3689,22 @@ function clearPickerSelection(){
 }
 
 function allUsedCards(){
-  // Cards already committed to the other slot
-  if(pickerMode==='hand') return boardCards.filter(Boolean);
-  return heroCards.filter(Boolean);
+  // Cards already committed elsewhere (hero hand, board, other opponents)
+  if(pickerMode==='hand') return [...boardCards.filter(Boolean),...Object.values(opponentHands).flat()];
+  if(pickerMode&&pickerMode.startsWith('opp-')){
+    const myPos=pickerMode.slice(4);
+    const otherOppCards=Object.entries(opponentHands)
+      .filter(([p])=>p!==myPos)
+      .flatMap(([,cards])=>cards);
+    return [...heroCards.filter(Boolean),...boardCards.filter(Boolean),...otherOppCards];
+  }
+  return [...heroCards.filter(Boolean),...Object.values(opponentHands).flat()];
 }
 
 function getPickerMaxCards(){
   if(pickerMode==='hand') return 2;
   if(pickerMode==='eq-hero'||pickerMode==='eq-villain') return 2;
+  if(pickerMode&&pickerMode.startsWith('opp-')) return 2;
   return 5; // board, eq-board
 }
 
@@ -3988,6 +4023,48 @@ function onProUpgradeClick(){
     }
   },300);
 }
+// ── 相手ハンド (D1) ──────────────────────────────
+function toggleOpponentHands(){
+  const body=document.getElementById('opp-hands-body');
+  const arrow=document.getElementById('opp-hands-arrow');
+  if(!body) return;
+  const isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'block';
+  if(arrow) arrow.textContent=isOpen?'▼':'▲';
+  if(!isOpen) renderOpponentHands();
+}
+function renderOpponentHands(){
+  const list=document.getElementById('opp-hands-list');
+  if(!list) return;
+  const positions=pos().filter((_,i)=>i!==state.heroIdx);
+  list.innerHTML=positions.map(p=>{
+    const cards=opponentHands[p]||[];
+    const hasCards=cards.length>=2;
+    const display=hasCards?cards.map(c=>{
+      const{rank,sym,color}=cardDisplay(c);
+      return`<span style="color:${color};font-weight:800">${rank}${sym}</span>`;
+    }).join(' '):'<span style="color:var(--text-muted)">未記録</span>';
+    const bg=hasCards?'var(--surface3)':'transparent';
+    const border=hasCards?'var(--gold-dim)':'var(--border2)';
+    return`<button onclick="openCardPicker('opp-${p}')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;background:${bg};border:1px solid ${border};border-radius:8px;cursor:pointer;font-family:inherit;min-width:64px">
+      <span style="font-size:9px;color:var(--text-dim);font-weight:700;letter-spacing:1px">${p}</span>
+      <span style="font-size:13px">${display}</span>
+    </button>`;
+  }).join('');
+}
+function getOpponentHandsString(){
+  // "UTG A♠K♠ / BB Q♣Q♦" のような短い表現を返す
+  const entries=Object.entries(opponentHands).filter(([,cards])=>cards.length>=2);
+  if(entries.length===0) return '';
+  return entries.map(([p,cards])=>{
+    const cardStr=cards.map(c=>{
+      const{rank,sym}=cardDisplay(c);
+      return rank+sym;
+    }).join('');
+    return `${p} ${cardStr}`;
+  }).join(' / ');
+}
+
 // AI評価を呼ばずに、ハンドだけを履歴として保存する。
 // 共有・知人との話のタネ・後で見返す用途。
 function saveAsHistoryOnly(){
@@ -4012,7 +4089,8 @@ function saveAsHistoryOnly(){
     action:action,
     rating:'',
     oneline:'',
-    comment:''
+    comment:'',
+    opponentHands:JSON.parse(JSON.stringify(opponentHands))
   });
   haptic('light');
   const btn=document.getElementById('save-history-btn');
@@ -4174,7 +4252,8 @@ EV影響: 高 / 中 / 低 / ほぼゼロ のいずれか1つだけ
       comment,
       evImpact,
       altLine,
-      altReason
+      altReason,
+      opponentHands:JSON.parse(JSON.stringify(opponentHands))
     });
 
     // 月次使用回数を増加(Pro版以外)
@@ -4938,6 +5017,17 @@ async function shareHistoryAsImage(idx){
     <div style="background:rgba(13,31,13,0.5);border:1px solid #2a4a2a;border-radius:16px;padding:28px;margin-bottom:24px;flex:1;overflow:hidden">
       <div style="font-size:16px;color:#7a9a7a;letter-spacing:3px;margin-bottom:14px">ACTION</div>
       <div style="font-size:22px;color:#d4e8d4;line-height:1.7;white-space:pre-wrap;font-family:'Inter','Courier New',monospace">${leakEscapeHtml(e.action||'')}</div>
+      ${(()=>{
+        const oh=e.opponentHands;
+        if(!oh||typeof oh!=='object') return '';
+        const entries=Object.entries(oh).filter(([,c])=>Array.isArray(c)&&c.length>=2);
+        if(entries.length===0) return '';
+        const str=entries.map(([p,cards])=>{
+          const cd=cards.map(c=>{const{rank,sym,color}=cardDisplay(c);return`<span style="color:${color};font-weight:800">${rank}${sym}</span>`;}).join(' ');
+          return`<span style="color:#7a9a7a">${p}</span> ${cd}`;
+        }).join('<span style="color:#4a6a4a"> / </span>');
+        return`<div style="margin-top:18px;padding-top:18px;border-top:1px solid #2a4a2a;font-size:20px;color:#d4e8d4">✋ 相手: ${str}</div>`;
+      })()}
     </div>
     ${e.comment
       ? `<div style="background:rgba(13,31,13,0.5);border-left:4px solid #c9a227;border-radius:8px;padding:24px;margin-bottom:24px">
@@ -5005,6 +5095,17 @@ function renderEvalHistory(){
         ${e.hand}${e.board?' / '+e.board:''} — ${e.street}
       </div>
       <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;line-height:1.6;white-space:pre-wrap">${e.action}</div>
+      ${(()=>{
+        const oh=e.opponentHands;
+        if(!oh||typeof oh!=='object') return '';
+        const entries=Object.entries(oh).filter(([,c])=>Array.isArray(c)&&c.length>=2);
+        if(entries.length===0) return '';
+        const str=entries.map(([p,cards])=>{
+          const cd=cards.map(c=>{const{rank,sym,color}=cardDisplay(c);return`<span style="color:${color}">${rank}${sym}</span>`;}).join('');
+          return`${p} ${cd}`;
+        }).join(' / ');
+        return`<div style="font-size:10px;color:var(--text-dim);margin-bottom:6px">✋ 相手: ${str}</div>`;
+      })()}
       ${e.comment?`<div style="font-size:11px;color:var(--text);line-height:1.7;padding-top:6px;border-top:1px solid var(--border)">${e.comment}</div>`:''}
     </div>`;
   }).join('');
@@ -5014,6 +5115,7 @@ function renderAll(){
   renderPosBtns();renderLogPosBtns();renderLogSeatList();
   renderAbHeroPosBtns();renderAbPlayerSelect();
   refreshLeakCta();
+  renderOpponentHands();
   if(state.currentTab==='range')renderMatrix();
 }
 
