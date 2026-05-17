@@ -3665,22 +3665,28 @@ function openCardPicker(mode){
 
   
 function closeCardPicker(){
-  // Commit selection
-  if(pickerMode==='hand'){
-    heroCards=[pickerSelected[0]||null,pickerSelected[1]||null];
-  }else if(pickerMode&&pickerMode.startsWith('opp-')){
-    const pos=pickerMode.slice(4);
-    const cards=pickerSelected.filter(Boolean);
-    if(cards.length===0) delete opponentHands[pos];
-    else opponentHands[pos]=cards;
-    renderOpponentHands();
-  } else {
-    boardCards=[0,1,2,3,4].map(i=>pickerSelected[i]||null);
+  // 一旦 pickerMode を退避してから後処理 (途中のレンダリングで干渉する可能性を排除)
+  const mode=pickerMode;
+  const selected=[...pickerSelected];
+  if(mode==='hand'){
+    heroCards=[selected[0]||null,selected[1]||null];
+  }else if(mode&&mode.startsWith('opp-')){
+    const oppPos=mode.slice(4);
+    const cards=selected.filter(Boolean);
+    console.log('[Ringdom] closeCardPicker opp:',oppPos,'cards:',cards);
+    if(cards.length===0) delete opponentHands[oppPos];
+    else opponentHands[oppPos]=cards;
+    console.log('[Ringdom] opponentHands now:',JSON.stringify(opponentHands));
+  } else if(mode==='board'){
+    boardCards=[0,1,2,3,4].map(i=>selected[i]||null);
   }
-  refreshCardDisplays();
+  // overlay 閉じてから render する (DOM 更新のタイミング干渉を避ける)
   const ov=document.getElementById('card-picker-overlay');
-  ov.style.opacity='0';ov.style.pointerEvents='none';
+  if(ov){ov.style.opacity='0';ov.style.pointerEvents='none';}
   pickerMode=null;
+  // render は最後にまとめて
+  refreshCardDisplays();
+  renderOpponentHands();
 }
 
 function clearPickerSelection(){
@@ -4035,18 +4041,30 @@ function toggleOpponentHands(){
 }
 function renderOpponentHands(){
   const list=document.getElementById('opp-hands-list');
-  if(!list) return;
+  if(!list){console.log('[Ringdom] renderOpponentHands: list element not found');return;}
   const positions=pos().filter((_,i)=>i!==state.heroIdx);
+  console.log('[Ringdom] renderOpponentHands positions:',positions,'opponentHands:',JSON.stringify(opponentHands));
   list.innerHTML=positions.map(p=>{
-    const cards=opponentHands[p]||[];
-    const hasCards=cards.length>=2;
-    const display=hasCards?cards.map(c=>{
-      const{rank,sym,color}=cardDisplay(c);
-      return`<span style="color:${color};font-weight:800">${rank}${sym}</span>`;
-    }).join(' '):'<span style="color:var(--text-muted)">未記録</span>';
+    const cards=Array.isArray(opponentHands[p])?opponentHands[p]:[];
+    const validCards=cards.filter(c=>typeof c==='string'&&c.length>=2);
+    const hasCards=validCards.length>=2;
+    let display='<span style="color:var(--text-muted)">未記録</span>';
+    if(hasCards){
+      try{
+        display=validCards.map(c=>{
+          const d=cardDisplay(c);
+          if(!d) return '';
+          return`<span style="color:${d.color};font-weight:800">${d.rank}${d.sym}</span>`;
+        }).join(' ');
+      }catch(e){
+        console.error('[Ringdom] renderOpponentHands display error:',e,'cards:',validCards);
+        display='<span style="color:#f87171">エラー</span>';
+      }
+    }
     const bg=hasCards?'var(--surface3)':'transparent';
     const border=hasCards?'var(--gold-dim)':'var(--border2)';
-    return`<button onclick="openCardPicker('opp-${p}')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;background:${bg};border:1px solid ${border};border-radius:8px;cursor:pointer;font-family:inherit;min-width:64px">
+    const color=hasCards?'#fff':'var(--text)';
+    return`<button onclick="openCardPicker('opp-${p}')" style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;background:${bg};border:1px solid ${border};border-radius:8px;cursor:pointer;font-family:inherit;min-width:64px;color:${color}">
       <span style="font-size:9px;color:var(--text-dim);font-weight:700;letter-spacing:1px">${p}</span>
       <span style="font-size:13px">${display}</span>
     </button>`;
