@@ -3642,6 +3642,7 @@ function refreshCardDisplays(){
 }
 
 function openCardPicker(mode){
+  console.log('[Ringdom] openCardPicker called with mode:',mode);
   pickerMode=mode;
   if(mode==='hand'){
     pickerSelected=[...heroCards].filter(Boolean);
@@ -3665,6 +3666,7 @@ function openCardPicker(mode){
 
   
 function closeCardPicker(){
+  console.log('[Ringdom] closeCardPicker called, pickerMode:',pickerMode,'pickerSelected:',pickerSelected);
   // 一旦 pickerMode を退避してから後処理 (途中のレンダリングで干渉する可能性を排除)
   const mode=pickerMode;
   const selected=[...pickerSelected];
@@ -3690,6 +3692,7 @@ function closeCardPicker(){
 }
 
 function clearPickerSelection(){
+  console.log('[Ringdom] clearPickerSelection called (this resets pickerSelected to empty)');
   pickerSelected=[];
   renderPickerGrid();
 }
@@ -3715,6 +3718,7 @@ function getPickerMaxCards(){
 }
 
 function togglePickerCard(card){
+  console.log('[Ringdom] togglePickerCard called with card:',card,'pickerMode:',pickerMode);
   const maxCards=getPickerMaxCards();
   const idx=pickerSelected.indexOf(card);
   if(idx>=0){
