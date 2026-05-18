@@ -4467,7 +4467,10 @@ function openEqPicker(target){
   ov.style.opacity='1';ov.style.pointerEvents='all';
 }
 
-// Override closeCardPicker to handle eq targets
+// Override closeCardPicker to handle eq targets.
+// 'eq-*' は EQ 計算用に独自処理。それ以外 (hand/board/opp-*) は
+// オリジナルの closeCardPicker に委譲して、ログ画面側で追加した opp-* 等の
+// 新モード処理が確実に走るようにする。
 const _origCloseCardPicker=window.closeCardPicker;
 window.closeCardPicker=function(){
   if(pickerMode&&pickerMode.startsWith('eq-')){
@@ -4480,21 +4483,14 @@ window.closeCardPicker=function(){
     ov.style.opacity='0';ov.style.pointerEvents='none';
     pickerMode=null;
   } else {
-    // Original log tab behavior
-    if(pickerMode==='hand'){
-      heroCards=[pickerSelected[0]||null,pickerSelected[1]||null];
-    } else if(pickerMode==='board'){
-      boardCards=[0,1,2,3,4].map(i=>pickerSelected[i]||null);
-    }
-    refreshCardDisplays();
-    const ov=document.getElementById('card-picker-overlay');
-    ov.style.opacity='0';ov.style.pointerEvents='none';
-    pickerMode=null;
+    // 元の closeCardPicker に委譲 (opp-* 等を含む全モード対応)
+    _origCloseCardPicker();
     updateEvalBtn();
   }
 };
 
-// Override allUsedCards to handle eq modes
+// Override allUsedCards to handle eq modes.
+// 同様に eq-* 以外はオリジナルに委譲 (opp-* の他プレイヤーカード除外を保持)。
 const _origAllUsedCards=window.allUsedCards;
 window.allUsedCards=function(){
   if(pickerMode&&pickerMode.startsWith('eq-')){
@@ -4505,8 +4501,8 @@ window.allUsedCards=function(){
     if(t==='board')   return [...eqHeroCards,...eqVillainCards].filter(Boolean);
     return all;
   }
-  if(pickerMode==='hand') return boardCards.filter(Boolean);
-  return heroCards.filter(Boolean);
+  // 元の allUsedCards に委譲 (opp-* の重複チェックを保持)
+  return _origAllUsedCards();
 };
 
 function refreshEqDisplays(){
