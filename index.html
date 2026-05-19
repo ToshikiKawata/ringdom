@@ -3338,6 +3338,12 @@ function renderAbHeroPosBtns(){
 
 function getStreetActions(){
   // 現ストリートのアクション一覧を返す
+  // 防御: street divider が一つも無い場合 (初期化漏れ等) は全アクションを現ストリート扱い。
+  // これがないと検証がバイパスされ、同一プレイヤーが何度でも追加できる事故が起きる。
+  const hasAnyStreet=actionLog.some(e=>e.type==='street');
+  if(!hasAnyStreet){
+    return actionLog.filter(e=>e.type==='action');
+  }
   let inCurrent=false;
   const acts=[];
   for(const e of actionLog){
@@ -3356,11 +3362,10 @@ function getAvailableActions(player){
 
   if(currentStreet==='preflop'){
     if(!hasAggressive){
-      // まだレイズなし: リンプ or レイズが選択肢
-      // BBはCheck可能（SB以外のコールがない場合）
-      const isBB=player==='BB';
-      const hasLimper=acts.some(e=>e.action==='call');
-      if(isBB&&!hasLimper) return['check','raise','allin'];
+      // まだレイズなし
+      // BB はリンパーの有無にかかわらず Check 可能 (既に BB を支払い済みのため)
+      if(player==='BB') return['check','raise','allin'];
+      // SB を含むその他: fold / call(リンプ) / raise / allin
       return['fold','call','raise','allin'];
     }
     // レイズあり
@@ -3456,6 +3461,21 @@ function addAction(){
 
   if(isStreetOver()) return;
 
+  // ストリート区切りを保証 (無いと検証がバイパスされる)
+  const existingStreets=actionLog.filter(e=>e.type==='street').map(e=>e.street);
+  if(!existingStreets.includes(currentStreet)){
+    actionLog.unshift({type:'street',street:currentStreet,label:STREET_LABELS[currentStreet]});
+  }
+
+  // フォールド済みプレイヤーは追加不可
+  const folded=getFoldedPlayers();
+  if(folded.has(player)) return;
+
+  // 選択中アクションが、その時点で有効なアクション一覧に含まれていなければ不可
+  // (UI ドロップダウンが古い状態でも追加を防ぐ)
+  const allowedActions=getAvailableActions(player);
+  if(!allowedActions.includes(action)) return;
+
   const acts=getStreetActions();
   const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
 
@@ -3474,6 +3494,15 @@ function addAction(){
   const sizeEl=document.getElementById('ab-size');
   const size=sizeEl?.value||'';
   const needsSize=action==='bet'||action==='raise'||action==='3bet';
+
+  // サイズ検証: bet/raise/3bet は正の数値必須
+  if(needsSize){
+    const sizeNum=parseFloat(size);
+    if(!isFinite(sizeNum)||sizeNum<=0){
+      alert('ベット/レイズサイズを入力してください (BB 単位、0より大きい数値)');
+      return;
+    }
+  }
 
   // 自動挿入（既にアクション済みのプレイヤーは除外）
   const alreadyInLog=new Set(getStreetActions().map(e=>e.player));
@@ -5131,6 +5160,8 @@ function renderEvalHistory(){
 }
   
 function renderAll(){
+  // 初期化漏れ防止: actionLog が空 (= street divider も無い) なら初期化
+  if(actionLog.length===0) initActionBuilder();
   renderPosBtns();renderLogPosBtns();renderLogSeatList();
   renderAbHeroPosBtns();renderAbPlayerSelect();
   refreshLeakCta();
