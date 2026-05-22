@@ -3169,22 +3169,21 @@ function getAutoFolds(currentPlayer){
 
   const acts=getStreetActions();
   const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
+  // Hero は絶対に自動フォールドしない (ユーザーの判断対象になるため)
+  const hero=heroPos();
 
   if(currentStreet==='preflop'){
     if(!hasAggressive){
-      // レイズなし：currentPlayerより前で未アクションの人を自動フォールド
       const unacted=getUnarctedThisStreet();
-      return order.slice(0,curIdx).filter(p=>unacted.includes(p)&&p!=='BB');
+      return order.slice(0,curIdx).filter(p=>unacted.includes(p)&&p!=='BB'&&p!==hero);
     }
-    // レイズあり：アグレッサー以降でcurrentPlayerより前の未アクション
     const unactedAfter=[...getUnactedAfterLastAggr()];
-    return order.slice(0,curIdx).filter(p=>unactedAfter.includes(p));
+    return order.slice(0,curIdx).filter(p=>unactedAfter.includes(p)&&p!==hero);
   }
 
-  // ポストフロップ
-  if(!hasAggressive) return []; // ベットなし→自動フォールドなし
+  if(!hasAggressive) return [];
   const unactedAfter=[...getUnactedAfterLastAggr()];
-  return order.slice(0,curIdx).filter(p=>unactedAfter.includes(p));
+  return order.slice(0,curIdx).filter(p=>unactedAfter.includes(p)&&p!==hero);
 }
 
 function getAutoChecks(currentPlayer){
@@ -3193,10 +3192,12 @@ function getAutoChecks(currentPlayer){
   const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
   if(hasAggressive) return [];
   const order=postFlopOrder();
-  const unacted=new Set(getUnarctedThisStreet()); // ← Setに変更
+  const unacted=new Set(getUnarctedThisStreet());
   const curIdx=order.indexOf(currentPlayer);
   if(curIdx<0) return [];
-  return order.slice(0,curIdx).filter(p=>unacted.has(p)); // ← has()に変更
+  // Hero は絶対に自動チェックしない (ユーザーが手動で意思入力するべきため)
+  const hero=heroPos();
+  return order.slice(0,curIdx).filter(p=>unacted.has(p)&&p!==hero);
 }
 
 
@@ -3250,8 +3251,15 @@ function addStreetDivider(street){
   // （ベットがなければ全員チェックでストリート終了が自然）
   const unacted=getUnarctedThisStreet();
   const hasAggressive=getStreetActions().some(e=>['bet','raise','3bet','allin'].includes(e.action));
+  // Hero がまだアクションしてないなら止める (Hero 自動フォールドを防ぐ)
+  const hero=heroPos();
+  const active=new Set(getActivePlayers());
+  if(unacted.includes(hero)&&active.has(hero)){
+    alert(`Hero (${hero}) のアクションを先に入力してから次のストリートに進んでください`);
+    return;
+  }
   unacted.forEach(p=>{
-    // ベットがある場合は自動フォールド、ない場合は自動チェック
+    if(p===hero) return; // 安全網: Hero は絶対に自動アクションを入れない
     const autoAction=hasAggressive?'fold':'check';
     actionLog.push({type:'action',player:p,action:autoAction,size:'',auto:true});
   });
@@ -3297,10 +3305,14 @@ function updateStreetBtns(){
   const alreadyPast=existing.some(s=>order2.indexOf(s)>order2.indexOf(prev));
   if(!streetHasAction(prev)&&!alreadyPast) return false;
   if(getActivePlayers().length<2) return false;
-  // ← ここを追加: レイズ後に未アクションのプレイヤーがいたらブロック
+  // レイズ後に未アクションのプレイヤーがいたらブロック
   const acts=getStreetActions();
   const hasAggr=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
   if(hasAggr&&getUnactedAfterLastAggr().size>0) return false;
+  // Hero がまだアクションしてないなら進めない (Hero を勝手に check/fold しないため)
+  const hero=heroPos();
+  const active=new Set(getActivePlayers());
+  if(active.has(hero)&&getUnarctedThisStreet().includes(hero)) return false;
   return true;
 }
 
@@ -3475,6 +3487,34 @@ function addAction(){
   // (UI ドロップダウンが古い状態でも追加を防ぐ)
   const allowedActions=getAvailableActions(player);
   if(!allowedActions.includes(action)) return;
+
+  // Hero がアクション順で先 (まだアクションしてない) なら Hero を先に入力させる。
+  // これがないと getAutoFolds が Hero を勝手にフォールドしてしまい、
+  // 評価対象のハンドが意図せず "Fold" として記録されるバグが起きる。
+  const hero=heroPos();
+  if(player!==hero){
+    const heroOrder=currentStreet==='preflop'?preflopOrder():postFlopOrder();
+    const heroIdx=heroOrder.indexOf(hero);
+    const playerIdx=heroOrder.indexOf(player);
+    if(heroIdx>=0&&playerIdx>heroIdx){
+      const _acts=getStreetActions();
+      const _active=new Set(getActivePlayers());
+      const _heroActedThisStreet=_acts.some(e=>e.player===hero);
+      const _hasAggr=_acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
+      let _needsHeroAction=false;
+      if(_active.has(hero)){
+        if(!_heroActedThisStreet) _needsHeroAction=true;
+        else if(_hasAggr){
+          const unactedAfter=getUnactedAfterLastAggr();
+          if(unactedAfter.has(hero)) _needsHeroAction=true;
+        }
+      }
+      if(_needsHeroAction){
+        alert(`Hero (${hero}) のアクションを先に入力してください`);
+        return;
+      }
+    }
+  }
 
   const acts=getStreetActions();
   const hasAggressive=acts.some(e=>['bet','raise','3bet','allin'].includes(e.action));
