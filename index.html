@@ -3855,18 +3855,31 @@ if(pickerMode==='board'||pickerMode==='eq-board'){
     </div>`).join('');
 }
 
+// 内部の "5s" (5 of spades) は AI が "56s"(suited) と紛らわしく誤読する事故が起きた。
+// AI に渡す文字列は ♠♥♦♣ の絵文字スートに変換して曖昧さを排除する。
+function cardToSymbol(card){
+  if(!card) return '';
+  const rank=card.slice(0,-1);
+  const suitKey=card.slice(-1);
+  const sym={s:'♠',h:'♥',d:'♦',c:'♣'}[suitKey]||suitKey;
+  return rank+sym;
+}
 function getHandString(){
   const cards=heroCards.filter(Boolean);
-  return cards.length===2?`${cards[0]} ${cards[1]}`:'（未選択）';
+  if(cards.length!==2) return '（未選択）';
+  const suited=cards[0].slice(-1)===cards[1].slice(-1);
+  const label=suited?'（スーテッド）':'（オフスート）';
+  return `${cardToSymbol(cards[0])} ${cardToSymbol(cards[1])} ${label}`;
 }
 
 function getBoardString(){
   const cards=[];
   for(const c of boardCards){if(!c) break;cards.push(c);}
   if(cards.length===0) return '（未選択）';
-  const flop=cards.slice(0,3).join(' ');
-  const turn=cards[3]?(' / '+cards[3]):'';
-  const river=cards[4]?(' / '+cards[4]):'';
+  const symbols=cards.map(cardToSymbol);
+  const flop=symbols.slice(0,3).join(' ');
+  const turn=symbols[3]?(' / '+symbols[3]):'';
+  const river=symbols[4]?(' / '+symbols[4]):'';
   return flop+turn+river;
 }
   
@@ -3946,10 +3959,14 @@ function analyzeBoardAndHero(){
   const vals=bRanks.map(r=>RV[r]).sort((a,b)=>b-a);
   const spread=vals[0]-vals[vals.length-1];
 
+  // スート1文字を絵文字に変換するヘルパー (AI への曖昧さを排除)
+  const SUIT_TO_SYM={s:'♠',h:'♥',d:'♦',c:'♣'};
+  const sym=s=>SUIT_TO_SYM[s]||s;
+
   const tex=[];
   if(trips.length) tex.push(`ボードトリップス(${trips.map(x=>x[0]).join(',')})`);
   else if(pairs.length) tex.push(`ボードペア(${pairs.map(x=>x[0]).join(',')})`);
-  if(flushSuit) tex.push(`フラッシュボード(${flushSuit[1]}枚/${flushSuit[0]})`);
+  if(flushSuit) tex.push(`フラッシュボード(${flushSuit[1]}枚/${sym(flushSuit[0])})`);
   if(spread<=4) tex.push('ストレートコネクト');
   if(vals[0]>=12) tex.push('ハイカードボード');
   lines.push('ボードテクスチャ: '+(tex.join(' / ')||'ドライ'));
@@ -3968,7 +3985,7 @@ function analyzeBoardAndHero(){
   const isActualFlush=boardHeroSameFlushCount>=5;
   const correctedName=(hv[0]===5&&!isActualFlush)?'ストレート（フラッシュ未完成）':handName;
   lines.push(`Heroのメイドハンド: ${correctedName}`);
-  lines.push(`注意: スーツ別カード数 - ${Object.entries([...board,...hero].reduce((a,c)=>{a[c[1]]=(a[c[1]]||0)+1;return a},{})).map(([s,n])=>s+':'+n+'枚').join(', ')}`);
+  lines.push(`注意: スーツ別カード数 - ${Object.entries([...board,...hero].reduce((a,c)=>{a[c[1]]=(a[c[1]]||0)+1;return a},{})).map(([s,n])=>sym(s)+':'+n+'枚').join(', ')}`);
   
   // ── ナッツ判定・上位ハンド警告 ──────────────────────
   const warnings=[];
@@ -3995,7 +4012,7 @@ function analyzeBoardAndHero(){
     const heroSuit=hero[0][1]===hero[1][1]?hero[0][1]:null;
     if(heroSuit&&heroSuit===flushSuit?.[0]){
       const heroFlushVals=hero.map(c=>RV[c[0]]).sort((a,b)=>b-a);
-      if(heroFlushVals[0]<14) warnings.push(`⚠ ナッツフラッシュ(A${flushSuit[0]})に負ける可能性`);
+      if(heroFlushVals[0]<14) warnings.push(`⚠ ナッツフラッシュ(A${sym(flushSuit[0])})に負ける可能性`);
     }
   }
   if(hv[0]===6){// フルハウス
