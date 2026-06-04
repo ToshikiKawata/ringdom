@@ -1,0 +1,18 @@
+{
+  "name": "RINGDOM",
+  "short_name": "Ringdom",
+  "description": "ポーカーのハンド履歴をAIが評価し、繰り返す弱点(リーク)を分析するトレーニングツール。",
+  "lang": "ja",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#071507",
+  "theme_color": "#071507",
+  "categories": ["education", "sports", "utilities"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

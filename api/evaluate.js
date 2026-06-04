@@ -2,7 +2,12 @@ export const config = { runtime: 'edge' };
 
 const ALLOWED_ORIGINS = [
   'https://ringdom.vercel.app',
-  'http://localhost:3000', // 開発用（不要なら削除）
+  'http://localhost:3000', // Web開発用
+  // ── ネイティブアプリ(Capacitor)からのアクセス ──
+  'capacitor://localhost', // iOS
+  'https://localhost',     // Android (androidScheme: https / 既定)
+  'http://localhost',      // Android (http スキーム時)
+  'ionic://localhost',     // 旧Ionic互換
 ];
 // Vercel プレビューデプロイURL (例: https://ringdom-git-xxx-toshikikawatas-projects.vercel.app)
 const PREVIEW_ORIGIN_REGEX = /^https:\/\/ringdom-[a-z0-9-]+\.vercel\.app$/;
