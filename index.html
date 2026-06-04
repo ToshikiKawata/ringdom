@@ -7,7 +7,11 @@
 <meta name="description" content="リングゲームをdominate。リアルタイムエクスプロイト戦略ツール。">
 <meta name="theme-color" content="#071507">
 
-<!-- PWA Manifest (inline) -->
+<!-- PWA Manifest & アイコン -->
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+
 
 <script>
 const APP_VERSION = 'v2.1.0'; // ← デプロイ時にバージョンを上げる
@@ -62,53 +66,7 @@ self.addEventListener('fetch',e=>{
 }
 </script>
 
-<!-- Apple Touch Icon (SVG inline → link) -->
-
-<script>
-(function(){
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 100 100">
-    <rect width="100" height="100" rx="22" fill="#071507"/>
-    <rect x="4" y="4" width="92" height="92" rx="18" fill="none" stroke="#c9a227" stroke-width="2"/>
-    <text x="50" y="42" text-anchor="middle" font-family="Georgia,serif" font-size="32" fill="#c9a227">♠</text>
-    <text x="50" y="72" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="800" fill="#c9a227" letter-spacing="1">RING</text>
-    <text x="50" y="86" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" font-weight="800" fill="#c9a227" letter-spacing="1">DOM</text>
-  </svg>`;
-  const url='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
-  const link=document.createElement('link');
-  link.rel='apple-touch-icon';link.href=url;
-  document.head.appendChild(link);
-})();
-</script>
-
-<!-- Service Worker registration -->
-
-<script>
-if('serviceWorker' in navigator){
-  const swCode=`
-const CACHE='ringdom-v1';
-const ASSETS=['/'];
-self.addEventListener('install',e=>{
-  e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)));
-  self.skipWaiting();
-});
-self.addEventListener('activate',e=>{
-  e.waitUntil(caches.keys().then(keys=>
-    Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))
-  ));
-  self.clients.claim();
-});
-self.addEventListener('fetch',e=>{
-  e.respondWith(
-    caches.match(e.request).then(r=>r||fetch(e.request).catch(()=>caches.match('/')))
-  );
-});
-`;
-  const blob=new Blob([swCode],{type:'application/javascript'});
-  const url=URL.createObjectURL(blob);
-  navigator.serviceWorker.register(url).catch(()=>{});
-}
-</script>
-
+<!-- (旧 SVG apple-touch-icon と重複 SW 登録は manifest.json + 静的PNG に統合済み) -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <style>
@@ -264,6 +222,9 @@ button:active{transform:scale(0.94);opacity:0.85}
 /* インラインSVGアイコン (絵文字置き換え) */
 .ic{width:1em;height:1em;display:inline-block;vertical-align:-0.14em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;color:var(--gold)}
 .ic.fill{fill:currentColor;stroke:none}
+
+/* ネイティブ(ストア)版では課金UIを隠す。Apple/Googleの外部決済規約対策 */
+html.native-app .web-only{display:none!important}
 </style>
 
 <!-- ── SVG アイコンスプライト (絵文字置き換え) ── -->
@@ -840,7 +801,7 @@ style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700
       </div>
     </div>
 
-    <div style="background:#1a1200;border:1px solid #c9a227;border-radius:12px;padding:14px;margin-bottom:14px">
+    <div class="web-only" style="background:#1a1200;border:1px solid #c9a227;border-radius:12px;padding:14px;margin-bottom:14px">
       <div style="font-size:11px;color:#c9a227;font-weight:700;letter-spacing:1.5px;margin-bottom:10px"><svg class="ic fill"><use href="#ic-star"/></svg> Pro にアップグレードすると</div>
       <div style="font-size:12px;color:#e8d8a0;line-height:2;margin-bottom:12px">
         ✓ AI評価 <span style="color:#c9a227;font-weight:700">無制限</span><br>
@@ -858,7 +819,7 @@ style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700
       </div>
     </div>
 
-    <button onclick="onProUpgradeClick()" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#c9a227;color:#0a1a0a;border:none;margin-bottom:8px">
+    <button class="web-only" onclick="onProUpgradeClick()" style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700;font-family:inherit;cursor:pointer;background:#c9a227;color:#0a1a0a;border:none;margin-bottom:8px">
       Proにアップグレード
     </button>
     <button onclick="closeEvalLimitModal()" style="width:100%;padding:11px;border-radius:8px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;background:transparent;color:#5a7a5a;border:1px solid #2a4a2a">
@@ -4132,6 +4093,8 @@ function closeEvalLimitModal(){
 }
 
 function onProUpgradeClick(){
+  // ストア版では課金導線を出さない(外部決済への誘導は規約違反のため)
+  if(isNativeApp()){ closeEvalLimitModal(); return; }
   // 現状は課金未実装なので、フィードバックフォームへ誘導
   // 将来Stripe実装したらここを置き換える
   closeEvalLimitModal();
@@ -5019,6 +4982,16 @@ function downloadImage(canvas){
   a.href=canvas.toDataURL('image/png');
   a.click();
 }
+// ── ネイティブ(ストア)アプリ判定 ──
+// Capacitor で包んだ iOS/Android アプリ上で実行されているかを判定する。
+// Phase 1 時点では Capacitor 未導入のため常に false (= Web として通常動作)。
+// ストア版では Apple/Google の外部決済規約に触れないよう課金UIを隠す。
+function isNativeApp(){
+  return !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+}
+// 起動時にネイティブなら <html> へ class を付与 → CSS の .web-only を非表示にする
+try{ if(isNativeApp()) document.documentElement.classList.add('native-app'); }catch(e){}
+
 // ── Pro/Free 状態管理 ──
 function isPro(){
   // 将来Stripeで認証実装する。今はlocalStorageベース
