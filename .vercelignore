@@ -1,0 +1,8 @@
+# Vercel(Web)デプロイには不要なネイティブ関連を除外する。
+# Web 配信に必要なのは index.html / manifest.json / icons/ / api/ / vercel.json のみ。
+ios/
+android/
+www/
+assets/
+scripts/
+capacitor.config.ts

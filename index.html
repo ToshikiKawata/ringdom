@@ -16,7 +16,11 @@
 <script>
 const APP_VERSION = 'v2.1.0'; // ← デプロイ時にバージョンを上げる
 
-if('serviceWorker' in navigator){
+// ネイティブ(Capacitor)実行時は SW を登録しない。
+// ローカル配信(capacitor://localhost)と SW のキャッシュが競合するのを避ける。
+const _IS_NATIVE = !!(window.Capacitor && typeof window.Capacitor.isNativePlatform === 'function' && window.Capacitor.isNativePlatform());
+
+if(!_IS_NATIVE && 'serviceWorker' in navigator){
   const swCode = `
 const CACHE='ringdom-${APP_VERSION}';
 const ASSETS=['/'];
@@ -4262,7 +4266,7 @@ EV影響: 高 / 中 / 低 / ほぼゼロ のいずれか1つだけ
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),20000);
 
-    const res=await fetch('/api/evaluate',{
+    const res=await fetch(apiUrl('/api/evaluate'),{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       signal:controller.signal,
@@ -4992,6 +4996,11 @@ function isNativeApp(){
 // 起動時にネイティブなら <html> へ class を付与 → CSS の .web-only を非表示にする
 try{ if(isNativeApp()) document.documentElement.classList.add('native-app'); }catch(e){}
 
+// API のベースURL。Web では同一オリジン("")、ネイティブアプリでは本番(Vercel)を直叩き。
+// (ネイティブは capacitor://localhost 起動のため、相対 /api/ だとローカルを指して繋がらない)
+const API_ORIGIN = 'https://ringdom.vercel.app';
+function apiUrl(path){ return (isNativeApp() ? API_ORIGIN : '') + path; }
+
 // ── Pro/Free 状態管理 ──
 function isPro(){
   // 将来Stripeで認証実装する。今はlocalStorageベース
@@ -5300,7 +5309,7 @@ async function runLeakAnalysis(){
       AI分析中... (最大30秒)
     </div>`;
   try{
-    const res=await fetch('/api/leak-analyze',{
+    const res=await fetch(apiUrl('/api/leak-analyze'),{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({history:input}),
