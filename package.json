@@ -2,8 +2,22 @@
   "name": "ringdom",
   "version": "2.1.0",
   "private": true,
+  "scripts": {
+    "copy:web": "node scripts/copy-web.js",
+    "sync": "node scripts/copy-web.js && cap sync",
+    "assets": "capacitor-assets generate",
+    "open:ios": "cap open ios",
+    "open:android": "cap open android"
+  },
   "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
     "@upstash/ratelimit": "^2.0.0",
     "@upstash/redis": "^1.34.0"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.4.0"
   }
 }

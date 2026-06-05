@@ -3,3 +3,17 @@ node_modules/
 .env
 .env.local
 .DS_Store
+
+# Capacitor: www/ は copy-web.js が生成する成果物
+www/
+# iOS / Android のビルド生成物 (ios/ android/ 本体は追跡する)
+ios/App/Pods/
+ios/App/build/
+ios/DerivedData/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/app/src/main/assets/public/
+ios/App/App/public/
