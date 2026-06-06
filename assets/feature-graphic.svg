@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="500" viewBox="0 0 1024 500">
+  <defs>
+    <radialGradient id="bg" cx="32%" cy="42%" r="80%">
+      <stop offset="0%" stop-color="#0e260e"/>
+      <stop offset="100%" stop-color="#050d05"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="500" fill="#071507"/>
+  <rect width="1024" height="500" fill="url(#bg)"/>
+  <!-- 左側ロゴ -->
+  <text x="90" y="210" font-family="Georgia, serif" font-size="120" fill="#c9a227">&#9824;</text>
+  <text x="180" y="200" font-family="Arial, 'Helvetica Neue', sans-serif" font-size="92" font-weight="800" fill="#c9a227" letter-spacing="6">RINGDOM</text>
+  <rect x="184" y="232" width="150" height="5" fill="#c9a227"/>
+  <text x="184" y="290" font-family="Arial, sans-serif" font-size="34" font-weight="700" fill="#e8d8a0" letter-spacing="2">AIポーカーコーチ</text>
+  <text x="184" y="338" font-family="Arial, sans-serif" font-size="24" fill="#7a9a7a" letter-spacing="1">ハンド履歴をAIが添削し、弱点(リーク)を可視化</text>
+  <!-- 右側の装飾カード -->
+  <g transform="translate(760,150) rotate(-8)">
+    <rect x="0" y="0" width="150" height="210" rx="16" fill="#f5f3ec" stroke="#c9a227" stroke-width="2"/>
+    <text x="22" y="62" font-family="Arial, sans-serif" font-size="56" font-weight="800" fill="#1a1a1a">A</text>
+    <text x="20" y="120" font-family="Georgia, serif" font-size="58" fill="#1a1a1a">&#9824;</text>
+  </g>
+  <g transform="translate(835,135) rotate(7)">
+    <rect x="0" y="0" width="150" height="210" rx="16" fill="#f5f3ec" stroke="#c9a227" stroke-width="2"/>
+    <text x="22" y="62" font-family="Arial, sans-serif" font-size="56" font-weight="800" fill="#1a1a1a">K</text>
+    <text x="20" y="120" font-family="Georgia, serif" font-size="58" fill="#1a1a1a">&#9824;</text>
+  </g>
+</svg>

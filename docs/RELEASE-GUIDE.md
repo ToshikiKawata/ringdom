@@ -62,7 +62,7 @@ Play ストアは **署名鍵（keystore）** が必須です。**Android Studio
 ### 2-3. Play Console でアプリ作成 → 提出
 1. Play Console で「アプリを作成」：名前 **RINGDOM**、無料、デフォルト言語=日本語
 2. 左メニューを順に埋める（`docs/store-listing.md` からコピペ）：
-   - **ストアの掲載情報**：短い説明 / 詳しい説明 / アイコン(512px=`icons/icon-512.png`) / フィーチャーグラフィック(1024×500・要作成) / スクショ
+   - **ストアの掲載情報**：短い説明 / 詳しい説明 / アイコン(512px=`icons/icon-512.png`) / フィーチャーグラフィック(`docs/store-assets/feature-graphic-1024x500.png` 作成済) / スクショ
    - **コンテンツのレーティング**：アンケートに回答（ギャンブル＝「実通貨の賭けなし/シミュレーテッドギャンブルなし」。`store-listing.md`§5参照）
    - **データセーフティ**：`store-listing.md`§8 の通り
    - **プライバシーポリシー**：`https://ringdom.vercel.app/privacy.html`
