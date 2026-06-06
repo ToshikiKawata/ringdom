@@ -8,6 +8,15 @@
 | 02-playlog-android.png | プレイログ（ハンド入力） | Android Emulator (Pixel 7) |
 | 03-ai-eval-android.png | AI評価結果（★5「教科書的オープン」） | Android Emulator |
 
+## ✅ 提出用（見出し付き・1080×1920）
+`store/` に**そのままアップロードできる**仕上げ済みスクショを置いています（深緑背景＋ゴールド見出し＋フレーム）。
+- `store/01-feature-onboarding.png` … 「評価が貯まるほど、弱点が見えてくる」
+- `store/02-feature-input.png` … 「プレイ後に入力するだけ」
+- `store/03-feature-ai-eval.png` … 「AIがEV目線で添削」
+- `store/04-feature-range.png` … 「レンジ表も内蔵」
+
+> 再生成スクリプト：`/tmp/gen_shots.js`（素材PNG＋見出しを Chrome で合成）。追加カット（リーク分析・エクイティ）も同方式で作成可。
+
 ## ストアが要求する主なサイズ
 - **App Store**：6.9インチ（1290×2796）必須。6.5インチ等は任意。最低1枚、最大10枚。
   - 追加で撮るなら `iPhone 16 Pro Max` 等のシミュレータで撮影すると 1290×2796 になります。
