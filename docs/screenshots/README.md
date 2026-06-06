@@ -17,6 +17,11 @@
 
 > 再生成スクリプト：`/tmp/gen_shots.js`（素材PNG＋見出しを Chrome で合成）。追加カット（リーク分析・エクイティ）も同方式で作成可。
 
+## ✅ App Store 用（1320×2868 = 6.9インチ）
+`store-ios/` に App Store Connect へそのままアップロードできる4枚（オンボーディングは実iOSキャプチャ）。
+- `store-ios/01-onboarding.png` / `02-input.png` / `03-ai-eval.png` / `04-range.png`
+> 再生成：`/tmp/gen_ios.js`。1290×2796 が必要な場合は window-size を変更して再レンダリング。
+
 ## ストアが要求する主なサイズ
 - **App Store**：6.9インチ（1290×2796）必須。6.5インチ等は任意。最低1枚、最大10枚。
   - 追加で撮るなら `iPhone 16 Pro Max` 等のシミュレータで撮影すると 1290×2796 になります。
