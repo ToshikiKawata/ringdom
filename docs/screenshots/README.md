@@ -1,0 +1,27 @@
+# ストア用スクリーンショット
+
+ここにあるのは**サンプル**（実機/エミュレータで撮影した実画面）です。提出時はこれを土台に、必要なら見出しコピー（`store-listing.md`§9）を重ねて仕上げてください。
+
+| ファイル | 内容 | 撮影元 |
+|---|---|---|
+| 01-onboarding-ios.png | オンボーディング | iOS Simulator (iPhone 17) |
+| 02-playlog-android.png | プレイログ（ハンド入力） | Android Emulator (Pixel 7) |
+| 03-ai-eval-android.png | AI評価結果（★5「教科書的オープン」） | Android Emulator |
+
+## ストアが要求する主なサイズ
+- **App Store**：6.9インチ（1290×2796）必須。6.5インチ等は任意。最低1枚、最大10枚。
+  - 追加で撮るなら `iPhone 16 Pro Max` 等のシミュレータで撮影すると 1290×2796 になります。
+- **Google Play**：携帯電話用スクショ 最低2枚（16:9 か 9:16、各辺 320〜3840px）。フィーチャーグラフィック 1024×500 が別途必須。
+
+## 追加で撮ると良いカット
+- リーク分析画面（AI評価を10件貯めると解放）
+- エクイティ計算機 / レンジ表
+- プレイヤー帳
+
+## 撮り方（コマンド）
+```bash
+# iOS（起動中シミュレータ）
+xcrun simctl io booted screenshot ~/Desktop/shot.png
+# Android（起動中エミュレータ）
+~/Library/Android/sdk/platform-tools/adb exec-out screencap -p > ~/Desktop/shot.png
+```

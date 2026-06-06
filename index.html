@@ -879,6 +879,9 @@ style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700
   <button onclick="window.location.href='mailto:jubei.animal@gmail.com?subject=Ringdom%20フィードバック'" style="width:100%;text-align:left;padding:13px 20px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer">
     <svg class="ic"><use href="#ic-mail"/></svg> フィードバック
   </button>
+  <button onclick="window.open('https://ringdom.vercel.app/privacy.html','_blank')" style="width:100%;text-align:left;padding:13px 20px;background:transparent;border:none;border-bottom:1px solid var(--border);color:var(--text);font-size:13px;font-family:inherit;cursor:pointer">
+    <svg class="ic"><use href="#ic-doc"/></svg> プライバシーポリシー
+  </button>
 
   <div style="padding:20px;color:var(--text-muted);font-size:10px;text-align:center;line-height:1.7">
     Ringdom v2.1.0<br>
@@ -4996,6 +4999,18 @@ function isNativeApp(){
 // 起動時にネイティブなら <html> へ class を付与 → CSS の .web-only を非表示にする
 try{ if(isNativeApp()) document.documentElement.classList.add('native-app'); }catch(e){}
 
+// ネイティブ: ステータスバーをテーマの深緑に揃える(白文字・WebView非オーバーレイ)
+try{
+  if(isNativeApp() && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.StatusBar){
+    const SB = window.Capacitor.Plugins.StatusBar;
+    SB.setStyle({ style: 'DARK' });            // 暗い背景 → 白いアイコン/文字
+    SB.setOverlaysWebView({ overlay: false }); // ステータスバー領域に独自背景を持たせる
+    if(window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'android'){
+      SB.setBackgroundColor({ color: '#071507' });
+    }
+  }
+}catch(e){}
+
 // API のベースURL。Web では同一オリジン("")、ネイティブアプリでは本番(Vercel)を直叩き。
 // (ネイティブは capacitor://localhost 起動のため、相対 /api/ だとローカルを指して繋がらない)
 const API_ORIGIN = 'https://ringdom.vercel.app';
@@ -5044,13 +5059,14 @@ function incrementEvalUsage(){
 }
 
 function getRemainingEvals(){
-  if(isPro()) return Infinity;
+  // ストア版(ネイティブ)は v1 無料配布 = 無制限。Pro も無制限。
+  if(isPro()||isNativeApp()) return Infinity;
   const usage=getEvalUsage();
   return Math.max(0,FREE_EVAL_LIMIT-usage.count);
 }
 
 function canEvaluate(){
-  return BETA_UNLIMITED||isPro()||getRemainingEvals()>0;
+  return BETA_UNLIMITED||isNativeApp()||isPro()||getRemainingEvals()>0;
 }
   
 function loadEvalHistory(){
