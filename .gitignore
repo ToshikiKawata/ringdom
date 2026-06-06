@@ -17,3 +17,8 @@ android/local.properties
 android/.idea/
 android/app/src/main/assets/public/
 ios/App/App/public/
+
+# 署名鍵・パスワード(絶対にコミットしない)
+android/keystore.properties
+*.jks
+*.keystore
