@@ -13,6 +13,7 @@
     "@capacitor/android": "^8.4.0",
     "@capacitor/core": "^8.4.0",
     "@capacitor/ios": "^8.4.0",
+    "@capacitor/status-bar": "^8.0.2",
     "@upstash/ratelimit": "^2.0.0",
     "@upstash/redis": "^1.34.0"
   },
