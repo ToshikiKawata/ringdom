@@ -160,6 +160,9 @@ button:active{transform:scale(0.94);opacity:0.85}
 .playing-card .suit-sym{font-size:12px;line-height:1}
 .card-pick-btn{width:100%;aspect-ratio:0.7;border-radius:5px;background:#1a2a1a;border:1px solid var(--border2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;font-family:inherit;font-weight:700;transition:all .1s;min-height:36px}
 .card-pick-btn:active{transform:scale(0.93)}
+/* 幅375px以下では13列が右端で見切れるためカードを少し小さくする */
+@media (max-width:389px){.card-pick-btn{min-height:31px}}
+@media (max-width:339px){.card-pick-btn{min-height:27px}}
 .street-btn{padding:6px 4px;border-radius:5px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-dim);border:1px solid var(--border2)}
 .street-btn.active{background:var(--gold);color:#0a1a0a;border-color:var(--gold)}
 .ss-btn{flex:1;padding:5px 2px;border-radius:5px;font-size:10px;font-weight:700;font-family:inherit;cursor:pointer;background:transparent;color:var(--text-dim);border:1px solid var(--border2)}
@@ -229,6 +232,7 @@ button:active{transform:scale(0.94);opacity:0.85}
 
 /* ネイティブ(ストア)版では課金UIを隠す。Apple/Googleの外部決済規約対策 */
 html.native-app .web-only{display:none!important}
+html:not(.native-app) .native-only{display:none!important}
 </style>
 
 <!-- ── SVG アイコンスプライト (絵文字置き換え) ── -->
@@ -303,7 +307,7 @@ html.native-app .web-only{display:none!important}
       <div class="ob-step-num">03</div>
       <div>
         <div style="font-size:15px;font-weight:700;color:#e8f0e8;margin-bottom:4px">リークが見えてくる</div>
-        <div style="font-size:12px;color:#7a9a7a;line-height:1.7">評価が貯まるほど、自分のクセ・<br>弱点パターンが浮き彫りになる。<br>※リーク自動分析は近日公開予定。</div>
+        <div style="font-size:12px;color:#7a9a7a;line-height:1.7">評価が貯まるほど、自分のクセ・<br>弱点パターンが浮き彫りになる。<br>AI評価が10件貯まると自動リーク分析が使える。</div>
       </div>
     </div>
   </div>
@@ -343,11 +347,21 @@ html.native-app .web-only{display:none!important}
 <div class="ob-slide" id="ob-slide-3" style="transform:translateX(100%)">
   <div style="padding:40px 24px 0">
     <div style="text-align:center;margin-bottom:24px">
-      <div style="display:inline-block;background:#1a0f00;border:1px solid #f97316;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;color:#f97316;letter-spacing:1px;margin-bottom:12px">β版 無料公開中</div>
+      <div style="display:inline-block;background:#1a0f00;border:1px solid #f97316;border-radius:20px;padding:4px 14px;font-size:11px;font-weight:700;color:#f97316;letter-spacing:1px;margin-bottom:12px"><span class="web-only">β版 無料公開中</span><span class="native-only">無料公開中</span></div>
       <div style="font-size:18px;font-weight:800;color:#e8f0e8">今は全機能が無料です</div>
     </div>
 
-    <div style="background:#0d1f0d;border:1px solid #2a4a2a;border-radius:12px;padding:14px;margin-bottom:10px">
+    <!-- ネイティブ(ストア版)はアプリ外課金の案内が出せないため、料金カードの代わりに機能一覧のみ表示 -->
+    <div class="native-only" style="background:#0d1f0d;border:1px solid #2a4a2a;border-radius:12px;padding:16px;margin-bottom:10px">
+      <div style="font-size:11px;color:#7a9a7a;line-height:2.1">
+        ✓ AI評価（回数制限なし）<br>
+        ✓ リーク自動分析（評価10件で解放）<br>
+        ✓ プレイヤー帳<br>
+        ✓ レンジ表・エクイティ計算
+      </div>
+    </div>
+
+    <div class="web-only" style="background:#0d1f0d;border:1px solid #2a4a2a;border-radius:12px;padding:14px;margin-bottom:10px">
   <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
     <div style="font-size:13px;font-weight:800;color:#e8f0e8">Free</div>
     <div style="font-size:12px;color:#4ade80;font-weight:700">¥0</div>
@@ -360,7 +374,7 @@ html.native-app .web-only{display:none!important}
   </div>
 </div>
     
-    <div style="background:#1a1200;border:1px solid #c9a227;border-radius:12px;padding:14px;margin-bottom:16px">
+    <div class="web-only" style="background:#1a1200;border:1px solid #c9a227;border-radius:12px;padding:14px;margin-bottom:16px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:13px;font-weight:800;color:#c9a227">Pro</div>
         <div style="text-align:right">
@@ -378,7 +392,7 @@ html.native-app .web-only{display:none!important}
       </div>
     </div>
 
-    <div style="background:#0d1a2a;border:1px solid #1e3a5f;border-radius:8px;padding:10px;margin-bottom:12px">
+    <div class="web-only" style="background:#0d1a2a;border:1px solid #1e3a5f;border-radius:8px;padding:10px;margin-bottom:12px">
       <div style="font-size:10px;color:#60A5FA;font-weight:700;margin-bottom:4px"><svg class="ic fill"><use href="#ic-star"/></svg> Earlybird特典</div>
       <div style="font-size:10px;color:#90b8d0;line-height:1.6">
         β期間中に登録された方は、Pro版リリース後も<br>
@@ -386,8 +400,11 @@ html.native-app .web-only{display:none!important}
       </div>
     </div>
 
-    <div style="font-size:10px;color:#3a5a3a;text-align:center;line-height:1.7">
+    <div class="web-only" style="font-size:10px;color:#3a5a3a;text-align:center;line-height:1.7">
       β版の間は制限なく全機能をお使いいただけます。<br>フィードバックをお待ちしています。
+    </div>
+    <div class="native-only" style="font-size:10px;color:#3a5a3a;text-align:center;line-height:1.7">
+      すべての機能を無料でお使いいただけます。<br>フィードバックをお待ちしています。
     </div>
   </div>
 </div>
@@ -830,7 +847,7 @@ style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700
       来月まで待つ
     </button>
 
-    <div style="font-size:10px;color:#3a5a3a;text-align:center;margin-top:14px;line-height:1.7;background:#1a0f00;border:1px solid #4a3a00;border-radius:6px;padding:8px">
+    <div class="web-only" style="font-size:10px;color:#3a5a3a;text-align:center;margin-top:14px;line-height:1.7;background:#1a0f00;border:1px solid #4a3a00;border-radius:6px;padding:8px">
       ※ 現在ベータ版のため、課金機能は準備中です。<br>
       Pro機能をご希望の方は、このボタンを押してフィードバックを送ってください。
     </div>
@@ -884,8 +901,7 @@ style="width:100%;padding:13px;border-radius:10px;font-size:13px;font-weight:700
   </button>
 
   <div style="padding:20px;color:var(--text-muted);font-size:10px;text-align:center;line-height:1.7">
-    Ringdom v2.1.0<br>
-    β版
+    Ringdom v2.1.0<span class="web-only"><br>β版</span>
   </div>
 </div>
 
@@ -4288,7 +4304,7 @@ EV影響: 高 / 中 / 低 / ほぼゼロ のいずれか1つだけ
     if(!res.ok||data.error){
       const errMsg=data.error?.message||data.error||`HTTP ${res.status}`;
       document.getElementById('eval-result').style.display='block';
-      document.getElementById('eval-comment').textContent=`APIエラー: ${errMsg}`;
+      document.getElementById('eval-comment').textContent=`評価サーバーでエラーが発生しました。時間をおいてもう一度お試しください。(${errMsg})`;
       return;
     }
 
@@ -4360,7 +4376,7 @@ EV影響: 高 / 中 / 低 / ほぼゼロ のいずれか1つだけ
   }catch(e){
     document.getElementById('eval-result').style.display='block';
     document.getElementById('eval-comment').textContent=
-      e.name==='AbortError'?'タイムアウト（15秒）: Edge Functionに到達できていません':`接続エラー: ${e.message}`;
+      e.name==='AbortError'?'時間内に応答がありませんでした。通信環境をご確認のうえ、もう一度お試しください。':`接続できませんでした。通信環境をご確認のうえ、もう一度お試しください。(${e.message})`;
   }finally{
     btn.innerHTML='AIに評価してもらう';btn.disabled=false;btn.style.opacity='1';
   }
@@ -5213,7 +5229,7 @@ function renderEvalHistory(){
         </div>
       </div>
       <div style="font-size:10px;color:var(--gold);margin-bottom:4px">
-        ${e.hand}${e.board?' / '+e.board:''} — ${e.street}
+        ${e.hand}${e.board&&e.board!=='（未選択）'?' / '+e.board:''} — ${e.street}
       </div>
       <div style="font-size:10px;color:var(--text-dim);margin-bottom:6px;line-height:1.6;white-space:pre-wrap">${e.action}</div>
       ${(()=>{
