@@ -18,7 +18,7 @@
 | プライバシーポリシー URL | https://ringdom.vercel.app/privacy.html |
 | サポート URL | https://ringdom.vercel.app/ |
 | マーケティング URL | https://note.com/jubei_poker |
-| 問い合わせメール | jubei.animal@gmail.com |
+| 問い合わせメール | tkawata.dev@gmail.com |
 
 ---
 
