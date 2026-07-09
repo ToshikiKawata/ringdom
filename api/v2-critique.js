@@ -75,7 +75,27 @@ function extractJson(text) {
   return JSON.parse(stripped.slice(start, end + 1));
 }
 
+// JSONレスポンス共通ヘルパー（CORSヘッダを毎回付与し漏れを防ぐ）
+function json(body, status) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+  });
+}
+
 export default async function handler(req) {
+  // CORS preflight（Web版開発/デバッグ時のみ経由。実機ネイティブは対象外だが
+  // 同一オリジンチェックはしない＝認証は下のx-app-tokenのみで担保）
+  if (req.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, x-app-token',
+      },
+    });
+  }
   if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 });
   }
@@ -83,26 +103,17 @@ export default async function handler(req) {
   // ── アプリトークン認証 (env未設定時は fail close) ──
   const expected = process.env.RINGDOM_APP_TOKEN;
   if (!expected) {
-    return new Response(JSON.stringify({ error: 'server_not_configured' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'server_not_configured' }, 500);
   }
   if (req.headers.get('x-app-token') !== expected) {
-    return new Response(JSON.stringify({ error: 'forbidden' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: 'forbidden' }, 403);
   }
 
   if (ratelimit) {
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const { success } = await ratelimit.limit(`v2c:${ip}`);
     if (!success) {
-      return new Response(
-        JSON.stringify({ error: 'rate_limited', message: '少し時間を空けて再度お試しください' }),
-        { status: 429, headers: { 'Content-Type': 'application/json' } }
-      );
+      return json({ error: 'rate_limited', message: '少し時間を空けて再度お試しください' }, 429);
     }
   }
 
@@ -110,10 +121,7 @@ export default async function handler(req) {
     const body = await req.json();
     const hand = body?.hand;
     if (!hand || !hand.stakes || !Array.isArray(hand.holeCards) || hand.holeCards.length !== 2) {
-      return new Response(JSON.stringify({ error: 'invalid_hand' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return json({ error: 'invalid_hand' }, 400);
     }
 
     console.log(
@@ -143,22 +151,13 @@ export default async function handler(req) {
     const data = await response.json();
     if (!response.ok) {
       console.error('anthropic_error', JSON.stringify(data?.error || {}));
-      return new Response(JSON.stringify({ error: 'upstream_error' }), {
-        status: 502,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return json({ error: 'upstream_error' }, 502);
     }
 
     const critique = extractJson(data?.content?.[0]?.text ?? '');
-    return new Response(JSON.stringify(critique), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json(critique, 200);
   } catch (e) {
     console.error('v2_critique_failed', e?.message);
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return json({ error: e.message }, 500);
   }
 }
