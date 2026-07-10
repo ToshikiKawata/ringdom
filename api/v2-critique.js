@@ -105,6 +105,25 @@ function json(body, status) {
   });
 }
 
+// レート制限・計測の単位。デバイスID優先（IPはキャリアCGNATで他人と共有されるため）
+function rateKey(req) {
+  const device = req.headers.get('x-device-id');
+  if (device) return `d:${device.slice(0, 64)}`;
+  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  return `ip:${ip}`;
+}
+
+// ログ用の短縮ハッシュ（生のデバイスIDをログに残さない）
+async function deviceHash(req) {
+  const device = req.headers.get('x-device-id');
+  if (!device) return 'no-device';
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(device));
+  return [...new Uint8Array(buf)]
+    .slice(0, 8)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 export default async function handler(req) {
   // CORS preflight（Web版開発/デバッグ時のみ経由。実機ネイティブは対象外だが
   // 同一オリジンチェックはしない＝認証は下のx-app-tokenのみで担保）
@@ -114,7 +133,7 @@ export default async function handler(req) {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, x-app-token',
+        'Access-Control-Allow-Headers': 'Content-Type, x-app-token, x-device-id',
       },
     });
   }
@@ -132,8 +151,7 @@ export default async function handler(req) {
   }
 
   if (ratelimit) {
-    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
-    const { success } = await ratelimit.limit(`v2c:${ip}`);
+    const { success } = await ratelimit.limit(`v2c:${rateKey(req)}`);
     if (!success) {
       return json({ error: 'rate_limited', message: '少し時間を空けて再度お試しください' }, 429);
     }
@@ -146,10 +164,12 @@ export default async function handler(req) {
       return json({ error: 'invalid_hand' }, 400);
     }
 
+    // 使用量計測（Phase A）: デバイスハッシュ単位でDAU・回数分布をログから集計できるようにする
     console.log(
       JSON.stringify({
         event: 'v2_critique',
         timestamp: new Date().toISOString(),
+        device: await deviceHash(req),
         country: req.headers.get('x-vercel-ip-country') || 'unknown',
       })
     );
