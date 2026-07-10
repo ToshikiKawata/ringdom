@@ -7,19 +7,34 @@ export const config = { runtime: 'edge' };
 // v2 の Critique 履歴から繰り返しの判断ミス(リーク)を抽出し、
 // v2 の Leak[] 型そのままの JSON を返す。認証は x-app-token。
 
-// レート制限: 1 IP につき 1時間 5回まで (v1 と同水準)
+// env値の貼り付け事故（引用符・改行・空白の混入）を自動除去する
+function cleanEnv(name) {
+  return (process.env[name] || '').trim().replace(/^["']|["']$/g, '');
+}
+
+// レート制限: 1デバイスにつき 1時間 5回まで (v1 と同水準)
 let ratelimit = null;
-if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-  try {
-    ratelimit = new Ratelimit({
-      redis: Redis.fromEnv(),
-      limiter: Ratelimit.slidingWindow(5, '1 h'),
-      analytics: true,
-      prefix: 'v2leaks',
-    });
-  } catch (e) {
-    console.error('ratelimit_init_failed', e?.message);
-    ratelimit = null;
+{
+  const url = cleanEnv('UPSTASH_REDIS_REST_URL');
+  const token = cleanEnv('UPSTASH_REDIS_REST_TOKEN');
+  if (url && token) {
+    if (!url.startsWith('https://')) {
+      console.error('ratelimit_init_failed', 'URL is not https:// (REST APIのURLを使うこと)');
+    } else {
+      try {
+        ratelimit = new Ratelimit({
+          redis: new Redis({ url, token }),
+          limiter: Ratelimit.slidingWindow(5, '1 h'),
+          analytics: true,
+          prefix: 'v2leaks',
+        });
+      } catch (e) {
+        console.error('ratelimit_init_failed', e?.message);
+        ratelimit = null;
+      }
+    }
+  } else {
+    console.error('ratelimit_disabled', 'UPSTASH env vars missing');
   }
 }
 

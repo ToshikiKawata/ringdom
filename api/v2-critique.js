@@ -8,19 +8,35 @@ export const config = { runtime: 'edge' };
 // プロンプトとレスポンス整形はサーバー側が持ち、クライアントには
 // v2 の Critique 型そのままの JSON を返す。
 
-// レート制限: 1 IP につき 1時間 20回まで (添削はプレイ後に数回叩く想定)
+// env値の貼り付け事故（引用符・改行・空白の混入）を自動除去する
+function cleanEnv(name) {
+  return (process.env[name] || '').trim().replace(/^["']|["']$/g, '');
+}
+
+// レート制限: 1デバイスにつき 1時間 20回まで (添削はプレイ後に数回叩く想定)
 let ratelimit = null;
-if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-  try {
-    ratelimit = new Ratelimit({
-      redis: Redis.fromEnv(),
-      limiter: Ratelimit.slidingWindow(20, '1 h'),
-      analytics: true,
-      prefix: 'v2critique',
-    });
-  } catch (e) {
-    console.error('ratelimit_init_failed', e?.message);
-    ratelimit = null;
+{
+  const url = cleanEnv('UPSTASH_REDIS_REST_URL');
+  const token = cleanEnv('UPSTASH_REDIS_REST_TOKEN');
+  if (url && token) {
+    if (!url.startsWith('https://')) {
+      // redis-cli用のrediss://等を貼った場合はREST APIのURLではない
+      console.error('ratelimit_init_failed', 'URL is not https:// (REST APIのURLを使うこと)');
+    } else {
+      try {
+        ratelimit = new Ratelimit({
+          redis: new Redis({ url, token }),
+          limiter: Ratelimit.slidingWindow(20, '1 h'),
+          analytics: true,
+          prefix: 'v2critique',
+        });
+      } catch (e) {
+        console.error('ratelimit_init_failed', e?.message);
+        ratelimit = null;
+      }
+    }
+  } else {
+    console.error('ratelimit_disabled', 'UPSTASH env vars missing');
   }
 }
 
