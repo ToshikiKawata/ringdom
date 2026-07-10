@@ -177,6 +177,13 @@ export default async function handler(req) {
     }
 
     const critique = extractJson(data?.content?.[0]?.text ?? '');
+    // モデルが数値をクォート付きで返すことがあるため正規化（クライアントの.toFixed()対策）
+    critique.evImpactBb = Number(critique.evImpactBb) || 0;
+    if (critique.equityPct != null) {
+      const eq = Number(critique.equityPct);
+      critique.equityPct = Number.isFinite(eq) ? eq : undefined;
+    }
+    if (!Array.isArray(critique.tags)) critique.tags = [];
     return json(critique, 200);
   } catch (e) {
     console.error('v2_critique_failed', e?.message);
